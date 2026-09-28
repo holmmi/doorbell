@@ -1,8 +1,8 @@
 import js from '@eslint/js'
-import globals from 'globals'
 import reactHooks from 'eslint-plugin-react-hooks'
 import reactRefresh from 'eslint-plugin-react-refresh'
 import tseslint from 'typescript-eslint'
+import eslintReact from '@eslint-react/eslint-plugin'
 import eslintPluginPrettierRecommended from 'eslint-plugin-prettier/recommended'
 import { defineConfig, globalIgnores } from 'eslint/config'
 
@@ -12,13 +12,18 @@ export default defineConfig([
     files: ['**/*.{ts,tsx}'],
     extends: [
       js.configs.recommended,
-      tseslint.configs.recommended,
+      tseslint.configs.recommendedTypeChecked,
       reactHooks.configs.flat.recommended,
       reactRefresh.configs.vite,
-      eslintPluginPrettierRecommended
+      eslintReact.configs['recommended-typescript'],
+      eslintPluginPrettierRecommended,
     ],
     languageOptions: {
-      globals: globals.browser,
+      parser: tseslint.parser,
+      parserOptions: {
+        projectService: true,
+        tsconfigRootDir: import.meta.dirname,
+      },
     },
   },
 ])
