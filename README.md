@@ -23,5 +23,5 @@ Introducing NPM workspaces for both frontend and backend allows to manage depend
 ### Starting the frontend development server
 ```shell
 cd doorbell-frontend/
-npm run 
+npm run dev
 ```
