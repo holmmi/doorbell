@@ -6,18 +6,16 @@ import eslintReact from '@eslint-react/eslint-plugin'
 import eslintPluginPrettierRecommended from 'eslint-plugin-prettier/recommended'
 import { defineConfig, globalIgnores } from 'eslint/config'
 
+const typescriptFiles = [
+  'doorbell-frontend/**/*.{ts,tsx}',
+  'doorbell-backend/**/*.ts',
+]
+
 export default defineConfig([
-  globalIgnores(['dist']),
+  globalIgnores(['**/dist/**']),
   {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      js.configs.recommended,
-      tseslint.configs.recommendedTypeChecked,
-      reactHooks.configs.flat.recommended,
-      reactRefresh.configs.vite,
-      eslintReact.configs['recommended-typescript'],
-      eslintPluginPrettierRecommended,
-    ],
+    files: typescriptFiles,
+    extends: [js.configs.recommended, tseslint.configs.recommendedTypeChecked],
     languageOptions: {
       parser: tseslint.parser,
       parserOptions: {
@@ -25,5 +23,17 @@ export default defineConfig([
         tsconfigRootDir: import.meta.dirname,
       },
     },
+  },
+  {
+    files: ['doorbell-frontend/**/*.{ts,tsx}'],
+    extends: [
+      reactHooks.configs.flat.recommended,
+      reactRefresh.configs.vite,
+      eslintReact.configs['recommended-typescript'],
+    ],
+  },
+  {
+    files: typescriptFiles,
+    extends: [eslintPluginPrettierRecommended],
   },
 ])
