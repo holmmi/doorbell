@@ -1,0 +1,33 @@
+services:
+  db:
+    image: postgres:18.6
+    environment:
+      POSTGRES_DB: doorbell
+      POSTGRES_USER: doorbell
+      POSTGRES_PASSWORD: doorbell
+    ports:
+      - '5432:5432'
+    volumes:
+      - postgres_data:/var/lib/postgresql
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U doorbell -d doorbell']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  flyway:
+    image: flyway/flyway:13.9.0
+    depends_on:
+      db:
+        condition: service_healthy
+    command: migrate
+    environment:
+      FLYWAY_LOCATIONS: filesystem:/flyway/sql
+      FLYWAY_URL: jdbc:postgresql://db:5432/doorbell
+      FLYWAY_USER: doorbell
+      FLYWAY_PASSWORD: doorbell
+    volumes:
+      - ./migrations:/flyway/sql:ro
+
+volumes:
+  postgres_data:
