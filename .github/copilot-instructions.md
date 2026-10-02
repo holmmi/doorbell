@@ -10,6 +10,9 @@ repository uses npm workspaces:
   in `src/App.tsx`; its entry point is `src/main.tsx`.
 - `doorbell-backend/`: Express server. `src/app.ts` creates and exports the app;
   `src/index.ts` starts it on port 8001.
+- `migrations/`: Flyway SQL migrations for the PostgreSQL database.
+- `docker-compose.yml`: starts PostgreSQL 18.6 as `db` and Flyway 13.9.0 to
+  apply the migrations.
 - The frontend development server uses port 8000 and proxies `/api` to
   `http://localhost:8001` (`doorbell-frontend/vite.config.ts`).
 
@@ -68,9 +71,18 @@ npm run dev --workspace=doorbell-frontend
 ```
 
 The backend watch process uses `tsx`; the frontend uses Vite. Docker is listed
-in the README prerequisites, but there is no Dockerfile, compose file, or
-script that uses Docker, so it is not needed for the current install, lint,
-build, test, or run commands.
+in the README prerequisites. To start the local database and run migrations,
+use:
+
+```sh
+docker compose up -d
+docker compose ps
+docker compose logs flyway
+```
+
+Flyway waits for the `db` healthcheck, mounts `migrations/` read-only, and
+exits after applying pending migrations. Use `docker compose down` to stop the
+services, or `docker compose down -v` to also remove the local database volume.
 
 ## Configuration and conventions
 
@@ -86,6 +98,8 @@ build, test, or run commands.
   `tsconfig.json`, with strict unused-code checks and no emit.
 - Frontend assets are under `doorbell-frontend/src/assets/`; static public
   files are under `doorbell-frontend/public/`.
+- Flyway migration files use the `V<version>__<description>.sql` naming
+  convention and are mounted from `migrations/` by Docker Compose.
 - Before submitting a change, run the CI sequence. If a change affects only
   one workspace, run its narrower lint/build or backend typecheck as a quick
   feedback loop, then still run root lint and build before finishing.
