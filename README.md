@@ -22,6 +22,25 @@ npm ci
 
 ### Starting the development servers
 
+Database:
+
+```shell
+docker compose up -d
+```
+
+PostgreSQL is available at `localhost:5432`. Flyway waits for PostgreSQL to
+become healthy, then applies the migrations from `migrations/` before exiting.
+Check the migration result with:
+
+```shell
+docker compose ps
+docker compose logs flyway
+```
+
+The Flyway logs should end with a successful migration message. To stop the
+services, run `docker compose down`. Add `-v` when stopping if the local
+database data should also be removed.
+
 Frontend:
 
 ```shell
