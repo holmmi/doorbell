@@ -13,6 +13,10 @@ repository uses npm workspaces:
 - `migrations/`: Flyway SQL migrations for the PostgreSQL database.
 - `docker-compose.yml`: starts PostgreSQL 18.6 as `db` and Flyway 13.9.0 to
   apply the migrations.
+- `doorbell-backend/Dockerfile`: builds and runs the backend on Node 24.21
+  Alpine 3.24.
+- `doorbell-frontend/Dockerfile`: builds the frontend and serves it with Nginx
+  1.31.6 Alpine 3.24.
 - The frontend development server uses port 8000 and proxies `/api` to
   `http://localhost:8001` (`doorbell-frontend/vite.config.ts`).
 
@@ -83,6 +87,15 @@ docker compose logs flyway
 Flyway waits for the `db` healthcheck, mounts `migrations/` read-only, and
 exits after applying pending migrations. Use `docker compose down` to stop the
 services, or `docker compose down -v` to also remove the local database volume.
+
+Build the application images from the repository root with:
+
+```sh
+docker build -f doorbell-backend/Dockerfile -t doorbell-backend:local .
+docker build -f doorbell-frontend/Dockerfile -t doorbell-frontend:local .
+```
+
+Both runtime images include `curl` for future healthchecks.
 
 ## Configuration and conventions
 

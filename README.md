@@ -41,6 +41,15 @@ The Flyway logs should end with a successful migration message. To stop the
 services, run `docker compose down`. Add `-v` when stopping if the local
 database data should also be removed.
 
+Application images:
+
+```shell
+docker build -f doorbell-backend/Dockerfile -t doorbell-backend:local .
+docker build -f doorbell-frontend/Dockerfile -t doorbell-frontend:local .
+```
+
+Both runtime images include `curl` for future container health checks.
+
 Frontend:
 
 ```shell
