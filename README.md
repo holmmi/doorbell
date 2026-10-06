@@ -41,31 +41,10 @@ The Flyway logs should end with a successful migration message. To stop the
 services, run `docker compose down`. Add `-v` when stopping if the local
 database data should also be removed.
 
-Application images:
-
-```shell
-docker build -f doorbell-backend/Dockerfile -t doorbell-backend:local .
-docker build -f doorbell-frontend/Dockerfile -t doorbell-frontend:local .
-```
-
-Both runtime images include `curl` for future container health checks.
-
-Frontend:
-
-```shell
-npm run dev --workspace=doorbell-frontend
-```
-
-Backend:
-
-```shell
-npm run dev --workspace=doorbell-backend
-```
-
 The backend loads PostgreSQL connection settings from
-`doorbell-backend/.env`. This local development file is included in version
-control and matches the credentials configured by Docker Compose. Adjust the
-values if you use a different database:
+`doorbell-backend/.env`. Create the `.env` file with the following
+content in the root of `doorbell-backend` directory to use the local
+development database:
 
 ```dotenv
 DB_HOST=localhost
@@ -75,6 +54,27 @@ DB_USER=doorbell
 DB_PASSWORD=doorbell
 ```
 
+Start frontend:
+
+```shell
+npm run dev --workspace=doorbell-frontend
+```
+
+Start backend:
+
+```shell
+npm run dev --workspace=doorbell-backend
+```
+
 ## Building and linting
 
 Run `npm run lint` to lint both workspaces, and `npm run build` to build both workspaces.
+
+Application Docker images can be built with the following commands, for example:
+
+```shell
+docker build -f doorbell-backend/Dockerfile -t doorbell-backend:local .
+docker build -f doorbell-frontend/Dockerfile -t doorbell-frontend:local .
+```
+
+Both runtime images include `curl` for future container health checks.
