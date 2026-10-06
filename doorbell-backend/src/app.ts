@@ -1,6 +1,5 @@
 import express from 'express'
 
-import './config/database.js'
 import userRouter from './routers/userRouter.js'
 
 const app = express()
