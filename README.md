@@ -62,6 +62,19 @@ Backend:
 npm run dev --workspace=doorbell-backend
 ```
 
+The backend loads PostgreSQL connection settings from
+`doorbell-backend/.env`. This local development file is included in version
+control and matches the credentials configured by Docker Compose. Adjust the
+values if you use a different database:
+
+```dotenv
+DB_HOST=localhost
+DB_PORT=5432
+DB_NAME=doorbell
+DB_USER=doorbell
+DB_PASSWORD=doorbell
+```
+
 ## Building and linting
 
 Run `npm run lint` to lint both workspaces, and `npm run build` to build both workspaces.
