@@ -11,7 +11,7 @@ export const registerUser: RequestHandler = async (request, response) => {
   const input = request.body as RegistrationInput
 
   if (await userExistsByEmail(input.email)) {
-    response.status(409).json({ error: 'Email is already registered' })
+    response.status(409).json({ error: 'error.registration.userAlreadyExists' })
     return
   }
 
