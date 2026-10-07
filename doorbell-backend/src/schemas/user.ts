@@ -7,5 +7,10 @@ export const registrationSchema = z.object({
   lastName: z.string().min(1),
   email: z.email(),
   role: z.enum(userRoles),
-  password: z.string().min(8),
+  password: z
+    .string()
+    .min(8)
+    .refine((password) => Buffer.byteLength(password, 'utf8') <= 72, {
+      message: 'Password must be at most 72 UTF-8 bytes',
+    }),
 })
