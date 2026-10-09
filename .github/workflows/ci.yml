@@ -26,5 +26,8 @@ jobs:
       - name: Lint workspaces
         run: npm run lint
 
+      - name: Test backend
+        run: npm test --workspace=doorbell-backend
+
       - name: Build workspaces
         run: npm run build

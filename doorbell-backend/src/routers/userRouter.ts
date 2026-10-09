@@ -1,10 +1,12 @@
 import { Router } from 'express'
 
-import { registerUser } from '../controllers/userController.js'
+import { loginUser, registerUser } from '../controllers/userController.js'
 import { validateRequestBody } from '../middlewares/validateRequest.js'
-import { registrationSchema } from '../schemas/user.js'
+import { loginSchema, registrationSchema } from '../schemas/user.js'
 
 const userRouter = Router()
+
+userRouter.post('/login', validateRequestBody(loginSchema), loginUser)
 
 userRouter.post(
   '/register',

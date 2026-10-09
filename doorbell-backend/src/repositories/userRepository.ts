@@ -1,5 +1,15 @@
 import { pool } from '../config/database.js'
-import type { CreatedUser, RegistrationInput } from '../types/user.js'
+import type {
+  CreatedUser,
+  RegistrationInput,
+  UserCredentials,
+} from '../types/user.js'
+
+const findUserCredentialsByEmailQuery = `
+  SELECT id, password AS "passwordHash"
+  FROM "user"
+  WHERE email = $1
+`
 
 const userExistsByEmailQuery = `
   SELECT EXISTS(
@@ -19,6 +29,17 @@ const createUserQuery = `
     email,
     role
 `
+
+export const findUserCredentialsByEmail = async (
+  email: string
+): Promise<UserCredentials | undefined> => {
+  const result = await pool.query<UserCredentials>(
+    findUserCredentialsByEmailQuery,
+    [email]
+  )
+
+  return result.rows[0]
+}
 
 export const userExistsByEmail = async (email: string): Promise<boolean> => {
   const result = await pool.query<{ exists: boolean }>(userExistsByEmailQuery, [

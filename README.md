@@ -41,7 +41,7 @@ The Flyway logs should end with a successful migration message. To stop the
 services, run `docker compose down`. Add `-v` when stopping if the local
 database data should also be removed.
 
-The backend loads PostgreSQL connection settings from
+The backend loads PostgreSQL and JWT settings from
 `doorbell-backend/.env`. Create the `.env` file with the following
 content in the root of `doorbell-backend` directory to use the local
 development database:
@@ -52,6 +52,15 @@ DB_PORT=5432
 DB_NAME=doorbell
 DB_USER=doorbell
 DB_PASSWORD=doorbell
+JWT_SECRET=
+```
+
+Generate a secret with the following command, then set `JWT_SECRET` to its
+output in `.env`. The backend requires a nonempty secret at startup. Supply
+the same environment variable when running the backend Docker image.
+
+```shell
+node -e "console.log(require('node:crypto').randomBytes(32).toString('hex'))"
 ```
 
 Start frontend:
@@ -66,9 +75,44 @@ Start backend:
 npm run dev --workspace=doorbell-backend
 ```
 
-## Building and linting
+## User login and authentication
+
+Send a JSON request to `POST /api/user/login`:
+
+```json
+{
+  "email": "user@example.com",
+  "password": "your registered password"
+}
+```
+
+A successful login returns HTTP 200 with `{ "token": "..." }`. Tokens use
+HS256, expire after one hour, and identify the user through the `sub` claim.
+Invalid credential fields return HTTP 400 with validation errors. Unknown
+emails and incorrect passwords both return HTTP 401 with
+`{ "error": "error.login.invalidCredentials" }`.
+
+Send the token as `Authorization: Bearer <token>` when calling a protected
+endpoint. Backend routers can protect individual routes with the
+`authenticate` middleware exported from `src/middlewares/authenticate.ts`.
+Authenticated handlers receive the string user ID through
+`request.auth.userId`. Missing, invalid, and expired tokens return HTTP 401
+with `{ "error": "error.authentication.unauthorized" }`.
+
+## Building, linting, and testing
 
 Run `npm run lint` to lint both workspaces, and `npm run build` to build both workspaces.
+
+Run the backend authentication tests from the repository root:
+
+```shell
+npm test --workspace=doorbell-backend
+```
+
+The tests use Node's test runner with `tsx`, real bcrypt/JWT verification, and
+HTTP requests against the Express app. Database queries are mocked, so a
+running PostgreSQL database is not required. CI runs these tests alongside
+linting and building.
 
 Application Docker images can be built with the following commands, for example:
 
