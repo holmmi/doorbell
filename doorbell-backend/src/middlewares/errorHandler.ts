@@ -16,7 +16,7 @@ export const errorHandler: ErrorRequestHandler = (
     'type' in error &&
     error.type === 'entity.parse.failed'
   ) {
-    response.status(400).json({ error: 'error.request.invalidJson' })
+    response.status(400).json({ error: 'error.request.invalid' })
     return
   }
 
@@ -26,5 +26,5 @@ export const errorHandler: ErrorRequestHandler = (
     path: request.path,
   })
 
-  response.status(500).json({ error: 'Internal server error' })
+  response.status(500).json({ error: 'error.server.unexpected' })
 }

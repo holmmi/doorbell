@@ -58,10 +58,11 @@ npm run lint --workspace=doorbell-backend
 
 The frontend build runs `tsc -b` and `vite build`. The backend build runs
 `tsc`; its output is `doorbell-backend/dist/`. Backend tests live in
-`doorbell-backend/test/*.test.mjs` and run through Node's test runner with
-`tsx`. They exercise login, JWT verification, and registration compatibility
-over HTTP, using real bcrypt/JWT operations and mocked database queries.
-They do not require a running PostgreSQL database.
+`doorbell-backend/test/*.test.ts` and run through Node's test runner with
+`tsx`. The test command first type-checks both source and tests using
+`doorbell-backend/test/tsconfig.json`. The tests cover JWT verification,
+request validation, and middleware using an isolated Express app. They do
+not load the database configuration or mock database queries.
 
 For a production smoke check, build first, then run these in separate terminals:
 
@@ -105,11 +106,12 @@ Both runtime images include `curl` for future healthchecks.
 
 ## Configuration and conventions
 
-- The backend uses dotenv to load `doorbell-backend/.env` when run through
-  workspace scripts. Set `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`,
+- The backend loads dotenv once at the start of `src/app.ts`, using
+  `doorbell-backend/.env` when run through workspace scripts. Set
+  `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`,
   `DB_PASSWORD`, and `JWT_SECRET`; database configuration and the JWT secret
   are validated at startup. `.env` is ignored by Git. JWTs use HS256 and a
-  one-hour expiration, with the string user ID in `sub`.
+  six-hour expiration, with the string user ID in `sub`.
 - Root `package.json` defines the workspaces and shared `lint`/`build` scripts;
   `package-lock.json` must be updated with dependency changes.
 - Root `eslint.config.js` applies type-aware ESLint to both workspaces and

@@ -8,7 +8,7 @@ export const loginSchema = z.object({
     .string()
     .min(1)
     .refine((password) => Buffer.byteLength(password, 'utf8') <= 72, {
-      message: 'Password must be at most 72 UTF-8 bytes',
+      error: 'Password must be at most 72 UTF-8 bytes',
     }),
 })
 
@@ -21,6 +21,6 @@ export const registrationSchema = z.object({
     .string()
     .min(8)
     .refine((password) => Buffer.byteLength(password, 'utf8') <= 72, {
-      message: 'Password must be at most 72 UTF-8 bytes',
+      error: 'Password must be at most 72 UTF-8 bytes',
     }),
 })

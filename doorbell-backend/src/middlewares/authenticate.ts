@@ -5,7 +5,9 @@ import { verifyAccessToken } from '../utils/jwt.js'
 
 export const authenticate: RequestHandler = (request, response, next) => {
   const authorization = request.get('Authorization')
-  const token = authorization?.match(/^Bearer ([^\s]+)$/i)?.[1]
+  const token = authorization?.toLowerCase().startsWith('bearer ')
+    ? authorization.substring(7)
+    : undefined
 
   if (!token) {
     response.status(401).json({ error: 'error.authentication.unauthorized' })

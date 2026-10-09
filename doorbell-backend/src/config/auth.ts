@@ -1,5 +1,3 @@
-import 'dotenv/config'
-
 const secret = process.env.JWT_SECRET
 
 if (!secret?.trim()) {

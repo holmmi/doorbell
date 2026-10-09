@@ -13,7 +13,7 @@ export const createAccessToken = (userId: string): string => {
   return jwt.sign({}, jwtSecret, {
     algorithm: 'HS256',
     subject: userId,
-    expiresIn: 60 * 60,
+    expiresIn: '6h',
   })
 }
 

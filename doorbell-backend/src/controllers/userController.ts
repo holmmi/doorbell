@@ -9,19 +9,21 @@ import {
 import type { LoginInput, RegistrationInput } from '../types/user.js'
 import { createAccessToken } from '../utils/jwt.js'
 
-// Match registration's bcrypt cost even when no account exists.
-const dummyPasswordHash =
-  '$2b$12$8HF3hP4AK5BeCkTcc2rzYOvwKU6fIAscmNJLgXJgqnqsoIUy5EsD2'
-
 export const loginUser: RequestHandler = async (request, response) => {
   const input = request.body as LoginInput
   const user = await findUserCredentialsByEmail(input.email)
+
+  if (!user) {
+    response.status(401).json({ error: 'error.login.invalidCredentials' })
+    return
+  }
+
   const passwordMatches = await bcrypt.compare(
     input.password,
-    user?.passwordHash ?? dummyPasswordHash
+    user.passwordHash
   )
 
-  if (!user || !passwordMatches) {
+  if (!passwordMatches) {
     response.status(401).json({ error: 'error.login.invalidCredentials' })
     return
   }

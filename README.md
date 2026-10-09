@@ -75,44 +75,15 @@ Start backend:
 npm run dev --workspace=doorbell-backend
 ```
 
-## User login and authentication
-
-Send a JSON request to `POST /api/user/login`:
-
-```json
-{
-  "email": "user@example.com",
-  "password": "your registered password"
-}
-```
-
-A successful login returns HTTP 200 with `{ "token": "..." }`. Tokens use
-HS256, expire after one hour, and identify the user through the `sub` claim.
-Invalid credential fields return HTTP 400 with validation errors. Unknown
-emails and incorrect passwords both return HTTP 401 with
-`{ "error": "error.login.invalidCredentials" }`.
-
-Send the token as `Authorization: Bearer <token>` when calling a protected
-endpoint. Backend routers can protect individual routes with the
-`authenticate` middleware exported from `src/middlewares/authenticate.ts`.
-Authenticated handlers receive the string user ID through
-`request.auth.userId`. Missing, invalid, and expired tokens return HTTP 401
-with `{ "error": "error.authentication.unauthorized" }`.
-
 ## Building, linting, and testing
 
 Run `npm run lint` to lint both workspaces, and `npm run build` to build both workspaces.
 
-Run the backend authentication tests from the repository root:
+Run the backend tests from the repository root:
 
 ```shell
 npm test --workspace=doorbell-backend
 ```
-
-The tests use Node's test runner with `tsx`, real bcrypt/JWT verification, and
-HTTP requests against the Express app. Database queries are mocked, so a
-running PostgreSQL database is not required. CI runs these tests alongside
-linting and building.
 
 Application Docker images can be built with the following commands, for example:
 
