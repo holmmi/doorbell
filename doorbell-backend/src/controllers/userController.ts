@@ -4,10 +4,37 @@ import type { RequestHandler } from 'express'
 import {
   createUser,
   findUserCredentialsByEmail,
+  findUserInfoById,
   userExistsByEmail,
 } from '../repositories/userRepository.js'
 import type { LoginInput, RegistrationInput } from '../types/user.js'
 import { createAccessToken } from '../utils/jwt.js'
+
+export const getUserInfo: RequestHandler = async (request, response) => {
+  const userId = request.auth?.userId
+
+  if (!userId) {
+    response.status(401).json({ error: 'error.authentication.unauthorized' })
+    return
+  }
+
+  const user = await findUserInfoById(userId)
+
+  if (!user) {
+    response.status(401).json({ error: 'error.authentication.unauthorized' })
+    return
+  }
+
+  response.json({
+    id: user.id,
+    role: user.role,
+    firstName: user.firstName,
+    lastName: user.lastName,
+    email: user.email,
+    phone: user.phone,
+    picturePath: user.picturePath,
+  })
+}
 
 export const loginUser: RequestHandler = async (request, response) => {
   const input = request.body as LoginInput

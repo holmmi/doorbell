@@ -13,7 +13,9 @@ repository uses npm workspaces:
 - Backend user routes live in `src/routers/userRouter.ts` under `/api/user`.
   Registration and login share Zod validation and repository-based SQL.
   `src/middlewares/authenticate.ts` verifies bearer JWTs and exposes
-  `request.auth.userId` to protected handlers.
+  `request.auth.userId` to protected handlers. `GET /api/user/info` uses it
+  to return the current account's public fields, including nullable phone
+  and picture path values. A token for a missing account receives HTTP 401.
 - `migrations/`: Flyway SQL migrations for the PostgreSQL database.
 - `docker-compose.yml`: starts PostgreSQL 18.6 as `db` and Flyway 13.9.0 to
   apply the migrations.
@@ -61,8 +63,11 @@ The frontend build runs `tsc -b` and `vite build`. The backend build runs
 `doorbell-backend/test/*.test.ts` and run through Node's test runner with
 `tsx`. The test command first type-checks both source and tests using
 `doorbell-backend/test/tsconfig.json`. The tests cover JWT verification,
-request validation, and middleware using an isolated Express app. They do
-not load the database configuration or mock database queries.
+request validation, and middleware using an isolated Express app.
+`test/userInfo.test.ts` also exercises the actual `/api/user/info` route with
+isolated test environment variables and a stubbed PostgreSQL `pool.query`.
+It loads database configuration but never connects to PostgreSQL, so the
+automated test suite requires no running database.
 
 For a production smoke check, build first, then run these in separate terminals:
 
