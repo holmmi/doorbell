@@ -6,7 +6,7 @@ import { after, before, test, type TestContext } from 'node:test'
 import jwt from 'jsonwebtoken'
 import type { QueryResult } from 'pg'
 
-import type { UserInfo } from '../src/types/user.js'
+import type { UserInfo } from '../../types/user.js'
 
 const testJwtSecret = 'test-only-jwt-secret-for-user-info'
 Object.assign(process.env, {
@@ -19,9 +19,9 @@ Object.assign(process.env, {
   DOTENV_CONFIG_PATH: '__test_missing_env__',
 })
 
-const { pool } = await import('../src/config/database.js')
-const { default: app } = await import('../src/app.js')
-const { createAccessToken } = await import('../src/utils/jwt.js')
+const { pool } = await import('../../config/database.js')
+const { default: app } = await import('../../app.js')
+const { createAccessToken } = await import('../../utils/jwt.js')
 
 const tenant: UserInfo = {
   id: '9007199254740993',
