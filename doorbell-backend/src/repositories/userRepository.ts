@@ -3,7 +3,21 @@ import type {
   CreatedUser,
   RegistrationInput,
   UserCredentials,
+  UserInfo,
 } from '../types/user.js'
+
+const findUserInfoByIdQuery = `
+  SELECT
+    id,
+    role,
+    first_name AS "firstName",
+    last_name AS "lastName",
+    email,
+    phone,
+    picture_path AS "picturePath"
+  FROM "user"
+  WHERE id = $1
+`
 
 const findUserCredentialsByEmailQuery = `
   SELECT id, password AS "passwordHash"
@@ -29,6 +43,14 @@ const createUserQuery = `
     email,
     role
 `
+
+export const findUserInfoById = async (
+  userId: string
+): Promise<UserInfo | undefined> => {
+  const result = await pool.query<UserInfo>(findUserInfoByIdQuery, [userId])
+
+  return result.rows[0]
+}
 
 export const findUserCredentialsByEmail = async (
   email: string

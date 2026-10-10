@@ -75,6 +75,36 @@ Start backend:
 npm run dev --workspace=doorbell-backend
 ```
 
+## Current account API
+
+Call `GET /api/user/info` with the access token returned by login in the
+`Authorization: Bearer <access-token>` header. Both tenants and landlords
+receive their own current account details with HTTP 200:
+
+```json
+{
+  "id": "9007199254740993",
+  "role": "TENANT",
+  "firstName": "Ada",
+  "lastName": "Example",
+  "email": "ada@example.com",
+  "phone": null,
+  "picturePath": null
+}
+```
+
+IDs are strings to preserve PostgreSQL `BIGINT` precision. `phone` and
+`picturePath` contain stored profile values or `null` when unset; registration
+currently leaves both unset. The response includes only these seven fields.
+Account IDs supplied in query parameters or a request body are ignored.
+
+Missing, invalid, or expired tokens and tokens for accounts that no longer
+exist receive HTTP 401 with:
+
+```json
+{ "error": "error.authentication.unauthorized" }
+```
+
 ## Building, linting, and testing
 
 Run `npm run lint` to lint both workspaces, and `npm run build` to build both workspaces.
