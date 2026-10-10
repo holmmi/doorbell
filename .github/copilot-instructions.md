@@ -58,11 +58,12 @@ npm run lint --workspace=doorbell-backend
 
 The frontend build runs `tsc -b` and `vite build`. The backend build runs
 `tsc`; its output is `doorbell-backend/dist/`. Backend tests live in
-`doorbell-backend/test/*.test.ts` and run through Node's test runner with
-`tsx`. The test command first type-checks both source and tests using
-`doorbell-backend/test/tsconfig.json`. The tests cover JWT verification,
-request validation, and middleware using an isolated Express app. They do
-not load the database configuration or mock database queries.
+`tests` directories beside the source files under `doorbell-backend/src/`
+and run through Node's test runner with `tsx`. The test command first
+type-checks both source and tests using `doorbell-backend/tsconfig.json`.
+The tests cover JWT configuration, verification, request validation, and
+middleware using an isolated Express app. They do not load the database
+configuration or mock database queries.
 
 For a production smoke check, build first, then run these in separate terminals:
 

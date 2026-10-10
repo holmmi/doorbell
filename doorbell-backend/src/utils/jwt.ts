@@ -1,13 +1,7 @@
 import jwt from 'jsonwebtoken'
-import { z } from 'zod'
 
 import { jwtSecret } from '../config/auth.js'
 import type { AuthenticatedUser } from '../types/user.js'
-
-const accessTokenPayloadSchema = z.object({
-  sub: z.string().regex(/^[1-9]\d*$/),
-  exp: z.number().int().positive(),
-})
 
 export const createAccessToken = (userId: string): string => {
   return jwt.sign({}, jwtSecret, {
@@ -19,11 +13,16 @@ export const createAccessToken = (userId: string): string => {
 
 export const verifyAccessToken = (token: string): AuthenticatedUser => {
   const payload = jwt.verify(token, jwtSecret, { algorithms: ['HS256'] })
-  const result = accessTokenPayloadSchema.safeParse(payload)
-
-  if (!result.success) {
+  // verify checks expiration when present; access tokens must include it.
+  if (
+    typeof payload === 'string' ||
+    typeof payload.exp !== 'number' ||
+    !Number.isInteger(payload.exp) ||
+    typeof payload.sub !== 'string' ||
+    !/^[1-9]\d*$/.test(payload.sub)
+  ) {
     throw new jwt.JsonWebTokenError('Invalid access token payload')
   }
 
-  return { userId: result.data.sub }
+  return { userId: payload.sub }
 }

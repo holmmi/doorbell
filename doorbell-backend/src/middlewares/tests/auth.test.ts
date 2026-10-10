@@ -1,22 +1,20 @@
 import assert from 'node:assert/strict'
-import { spawnSync } from 'node:child_process'
 import { once } from 'node:events'
 import type { Server } from 'node:http'
-import path from 'node:path'
 import { after, before, test } from 'node:test'
 
 import express from 'express'
 import jwt, { type SignOptions } from 'jsonwebtoken'
 
-import { errorHandler } from '../src/middlewares/errorHandler.js'
-import { validateRequestBody } from '../src/middlewares/validateRequest.js'
-import { loginSchema } from '../src/schemas/user.js'
+import { errorHandler } from '../errorHandler.js'
+import { validateRequestBody } from '../validateRequest.js'
+import { loginSchema } from '../../schemas/user.js'
 
 const testJwtSecret = 'test-only-jwt-secret-for-authentication'
 process.env.JWT_SECRET = testJwtSecret
 
-const { authenticate } = await import('../src/middlewares/authenticate.js')
-const { createAccessToken } = await import('../src/utils/jwt.js')
+const { authenticate } = await import('../authenticate.js')
+const { createAccessToken } = await import('../../utils/jwt.js')
 
 const app = express()
 app.use(express.json())
@@ -176,8 +174,23 @@ const invalidAuthorization: [
   ['zero user ID', `Bearer ${sign({}, { subject: '0' })}`],
   ['invalid user ID', `Bearer ${sign({}, { subject: 'not-a-user-id' })}`],
   [
+    'numeric user ID',
+    `Bearer ${jwt.sign(
+      JSON.stringify({ sub: 123, exp: Math.floor(Date.now() / 1000) + 60 }),
+      testJwtSecret
+    )}`,
+  ],
+  [
     'missing expiration',
     `Bearer ${jwt.sign({}, testJwtSecret, { subject: userId })}`,
+  ],
+  [
+    'fractional expiration',
+    `Bearer ${jwt.sign(
+      { exp: Math.floor(Date.now() / 1000) + 60.5 },
+      testJwtSecret,
+      { subject: userId }
+    )}`,
   ],
   ['string payload', `Bearer ${jwt.sign('user', testJwtSecret)}`],
 ]
@@ -197,38 +210,3 @@ void test('authentication accepts a case-insensitive bearer scheme', async () =>
   assert.equal(response.status, 200)
   assert.deepEqual(await response.json(), { userId })
 })
-
-for (const secret of [undefined, '', '   ']) {
-  void test(`JWT configuration rejects ${JSON.stringify(secret)} secrets`, () => {
-    const env: NodeJS.ProcessEnv = {
-      ...process.env,
-      DOTENV_CONFIG_PATH: '__test_missing_env__',
-    }
-    if (secret === undefined) {
-      delete env.JWT_SECRET
-    } else {
-      env.JWT_SECRET = secret
-    }
-
-    const result = spawnSync(
-      process.execPath,
-      [
-        '--import',
-        'tsx',
-        '--input-type=module',
-        '--eval',
-        "await import('./src/config/auth.ts')",
-      ],
-      {
-        cwd: path.resolve(import.meta.dirname, '..'),
-        env,
-        encoding: 'utf8',
-      }
-    )
-    assert.notEqual(result.status, 0)
-    assert.match(
-      result.stderr,
-      /Missing required environment variable: JWT_SECRET/
-    )
-  })
-}
