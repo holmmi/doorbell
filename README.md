@@ -41,7 +41,7 @@ The Flyway logs should end with a successful migration message. To stop the
 services, run `docker compose down`. Add `-v` when stopping if the local
 database data should also be removed.
 
-The backend loads PostgreSQL connection settings from
+The backend loads PostgreSQL and JWT settings from
 `doorbell-backend/.env`. Create the `.env` file with the following
 content in the root of `doorbell-backend` directory to use the local
 development database:
@@ -52,6 +52,15 @@ DB_PORT=5432
 DB_NAME=doorbell
 DB_USER=doorbell
 DB_PASSWORD=doorbell
+JWT_SECRET=
+```
+
+Generate a secret with the following command, then set `JWT_SECRET` to its
+output in `.env`. The backend requires a nonempty secret at startup. Supply
+the same environment variable when running the backend Docker image.
+
+```shell
+node -e "console.log(require('node:crypto').randomBytes(32).toString('hex'))"
 ```
 
 Start frontend:
@@ -66,9 +75,15 @@ Start backend:
 npm run dev --workspace=doorbell-backend
 ```
 
-## Building and linting
+## Building, linting, and testing
 
 Run `npm run lint` to lint both workspaces, and `npm run build` to build both workspaces.
+
+Run the backend tests from the repository root:
+
+```shell
+npm test --workspace=doorbell-backend
+```
 
 Application Docker images can be built with the following commands, for example:
 

@@ -1,7 +1,4 @@
-import dotenv from 'dotenv'
 import { Pool } from 'pg'
-
-dotenv.config()
 
 const requiredEnvironmentVariables = [
   'DB_HOST',

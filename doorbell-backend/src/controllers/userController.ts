@@ -3,9 +3,33 @@ import type { RequestHandler } from 'express'
 
 import {
   createUser,
+  findUserCredentialsByEmail,
   userExistsByEmail,
 } from '../repositories/userRepository.js'
-import type { RegistrationInput } from '../types/user.js'
+import type { LoginInput, RegistrationInput } from '../types/user.js'
+import { createAccessToken } from '../utils/jwt.js'
+
+export const loginUser: RequestHandler = async (request, response) => {
+  const input = request.body as LoginInput
+  const user = await findUserCredentialsByEmail(input.email)
+
+  if (!user) {
+    response.status(401).json({ error: 'error.login.invalidCredentials' })
+    return
+  }
+
+  const passwordMatches = await bcrypt.compare(
+    input.password,
+    user.passwordHash
+  )
+
+  if (!passwordMatches) {
+    response.status(401).json({ error: 'error.login.invalidCredentials' })
+    return
+  }
+
+  response.json({ token: createAccessToken(user.id) })
+}
 
 export const registerUser: RequestHandler = async (request, response) => {
   const input = request.body as RegistrationInput
