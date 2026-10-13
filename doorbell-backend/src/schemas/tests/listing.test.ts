@@ -42,14 +42,12 @@ void test('presign schema allows only supported image content types', () => {
   assert.equal(
     presignImageSchema.safeParse({
       contentType: 'image/png',
-      displayOrder: 0,
     }).success,
     true
   )
   assert.equal(
     presignImageSchema.safeParse({
       contentType: 'image/webp',
-      displayOrder: 0,
     }).success,
     false
   )

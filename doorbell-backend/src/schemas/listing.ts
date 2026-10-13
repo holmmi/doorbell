@@ -14,7 +14,6 @@ export const listingSchema = z.object({
 
 export const presignImageSchema = z.object({
   contentType: z.enum(['image/png', 'image/jpg', 'image/jpeg']),
-  displayOrder: z.number().int().nonnegative(),
 })
 
 export const uploadImageSchema = z.object({
