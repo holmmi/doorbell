@@ -23,9 +23,17 @@ export interface CreatedListing {
   id: string
 }
 
-export interface OwnedListing {
+export interface Listing {
   id: string
   ownerId: string
+  createdAt: string
+  monthlyPrice: string
+  squareMeters: string
+  neighborhood: string
+  city: string
+  availableFrom: string
+  extraCosts: string
+  rooms: Room
   published: boolean
 }
 

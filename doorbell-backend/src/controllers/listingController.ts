@@ -3,7 +3,7 @@ import type { RequestHandler } from 'express'
 import {
   createListing,
   createListingImage,
-  findListingOwner,
+  findListingById,
   publishListing,
 } from '../repositories/listingRepository.js'
 import {
@@ -24,7 +24,7 @@ const requireOwnedListing = async (
 ) => {
   const ownerId = request.auth?.userId
   const listingId = listingIdFromRequest(request)
-  const listing = listingId ? await findListingOwner(listingId) : undefined
+  const listing = listingId ? await findListingById(listingId) : undefined
 
   if (!ownerId || !listing || listing.ownerId !== ownerId) {
     response.status(404).json({ error: 'error.listing.notFound' })

@@ -2,8 +2,8 @@ import { pool } from '../config/database.js'
 import type {
   CreatedListing,
   ImageUploadInput,
+  Listing,
   ListingInput,
-  OwnedListing,
 } from '../types/listing.js'
 import type { ListingImage } from '../types/listing.js'
 
@@ -22,8 +22,19 @@ const createListingQuery = `
   RETURNING id
 `
 
-const findListingOwnerQuery = `
-  SELECT id, owner_id AS "ownerId", published
+const findListingByIdQuery = `
+  SELECT
+    id,
+    owner_id AS "ownerId",
+    created_at AS "createdAt",
+    monthly_price AS "monthlyPrice",
+    square_meters AS "squareMeters",
+    neighborhood,
+    city,
+    available_from AS "availableFrom",
+    extra_costs AS "extraCosts",
+    rooms,
+    published
   FROM rental_listing
   WHERE id = $1
 `
@@ -32,7 +43,18 @@ const publishListingQuery = `
   UPDATE rental_listing
   SET published = TRUE
   WHERE id = $1 AND owner_id = $2
-  RETURNING id, owner_id AS "ownerId", published
+  RETURNING
+    id,
+    owner_id AS "ownerId",
+    created_at AS "createdAt",
+    monthly_price AS "monthlyPrice",
+    square_meters AS "squareMeters",
+    neighborhood,
+    city,
+    available_from AS "availableFrom",
+    extra_costs AS "extraCosts",
+    rooms,
+    published
 `
 
 const createImageQuery = `
@@ -59,12 +81,10 @@ export const createListing = async (
   return result.rows[0]
 }
 
-export const findListingOwner = async (
+export const findListingById = async (
   listingId: string
-): Promise<OwnedListing | undefined> => {
-  const result = await pool.query<OwnedListing>(findListingOwnerQuery, [
-    listingId,
-  ])
+): Promise<Listing | undefined> => {
+  const result = await pool.query<Listing>(findListingByIdQuery, [listingId])
 
   return result.rows[0]
 }
@@ -72,8 +92,8 @@ export const findListingOwner = async (
 export const publishListing = async (
   listingId: string,
   ownerId: string
-): Promise<OwnedListing | undefined> => {
-  const result = await pool.query<OwnedListing>(publishListingQuery, [
+): Promise<Listing | undefined> => {
+  const result = await pool.query<Listing>(publishListingQuery, [
     listingId,
     ownerId,
   ])
