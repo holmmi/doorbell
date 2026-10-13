@@ -5,6 +5,7 @@ import type {
   UserCredentials,
   UserInfo,
 } from '../types/user.js'
+import type { UserRole } from '../types/user.js'
 
 const findUserInfoByIdQuery = `
   SELECT
@@ -42,6 +43,12 @@ const createUserQuery = `
     last_name AS "lastName",
     email,
     role
+`
+
+const findUserRoleByIdQuery = `
+  SELECT role
+  FROM "user"
+  WHERE id = $1
 `
 
 export const findUserInfoById = async (
@@ -84,4 +91,14 @@ export const createUser = async (
   ])
 
   return result.rows[0]
+}
+
+export const findUserRoleById = async (
+  userId: string
+): Promise<UserRole | undefined> => {
+  const result = await pool.query<{ role: UserRole }>(findUserRoleByIdQuery, [
+    userId,
+  ])
+
+  return result.rows[0]?.role
 }
