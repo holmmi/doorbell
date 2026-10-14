@@ -17,7 +17,7 @@ export function MatchesBadge({ count }: MatchesBadgeProps) {
         px: 0.75,
         borderRadius: 999,
         backgroundColor: 'secondary.main',
-        color: 'text.tertiary',
+        color: 'text.primary',
         fontWeight: 700,
         lineHeight: 1,
       }}
@@ -26,7 +26,7 @@ export function MatchesBadge({ count }: MatchesBadgeProps) {
         variant="caption"
         component="span"
         sx={{
-          color: 'text.tertiary',
+          color: 'text.primary',
           fontWeight: 700,
           fontSize: '0.72rem',
           lineHeight: 1,

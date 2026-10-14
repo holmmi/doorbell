@@ -33,19 +33,27 @@ export function AppShell() {
           sx={{
             justifyContent: 'space-between',
             alignItems: 'center',
-            minHeight: 84,
+            flexWrap: { xs: 'wrap', md: 'nowrap' },
+            minHeight: { xs: 'auto', md: 84 },
             px: { xs: 2.5, md: 4 },
+            py: { xs: 1.25, md: 0 },
+            rowGap: { xs: 1, md: 0 },
           }}
         >
-          <DoorbellLogo />
+          <Box sx={{ order: { xs: 1, md: 0 } }}>
+            <DoorbellLogo />
+          </Box>
 
           <Box
             sx={{
               display: 'flex',
               alignItems: 'center',
-              gap: { xs: 1.5, md: 3 },
-              ml: 'auto',
-              mr: 2,
+              justifyContent: { xs: 'center', md: 'flex-start' },
+              gap: { xs: 2, md: 3 },
+              flexBasis: { xs: '100%', md: 'auto' },
+              order: { xs: 3, md: 0 },
+              ml: { xs: 0, md: 'auto' },
+              mr: { xs: 0, md: 2 },
             }}
           >
             {navItems.map((item) => (
@@ -80,7 +88,9 @@ export function AppShell() {
             ))}
           </Box>
 
-          <ProfileAvatar alt={t('profile.avatarAlt')} />
+          <Box sx={{ order: { xs: 2, md: 0 } }}>
+            <ProfileAvatar alt={t('profile.avatarAlt')} />
+          </Box>
         </Toolbar>
       </AppBar>
 
