@@ -77,6 +77,10 @@ export const uploadListingImage: RequestHandler = async (request, response) => {
 
   await verifyImageObject(input.objectKey)
   const image = await createListingImage(listing.id, input)
+  if (!image) {
+    response.status(409).json({ error: 'error.listing.image.alreadyFinalized' })
+    return
+  }
   response.status(201).json(image)
 }
 
@@ -90,8 +94,12 @@ export const publishRentalListing: RequestHandler = async (
   }
 
   const publishedListing = await publishListing(listing.id, listing.ownerId)
+  if (!publishedListing) {
+    response.status(409).json({ error: 'error.listing.images.incomplete' })
+    return
+  }
   response.json({
-    id: publishedListing?.id,
-    published: publishedListing?.published,
+    id: publishedListing.id,
+    published: publishedListing.published,
   })
 }

@@ -31,6 +31,7 @@ export const getObjectStorage = (): {
     endpoint: process.env.S3_ENDPOINT,
     region: process.env.S3_REGION,
     forcePathStyle: process.env.S3_FORCE_PATH_STYLE === 'true',
+    requestChecksumCalculation: 'WHEN_REQUIRED',
     credentials: {
       accessKeyId: process.env.S3_ACCESS_KEY as string,
       secretAccessKey: process.env.S3_SECRET_KEY as string,

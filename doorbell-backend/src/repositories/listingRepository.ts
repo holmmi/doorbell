@@ -42,7 +42,13 @@ const findListingByIdQuery = `
 const publishListingQuery = `
   UPDATE rental_listing
   SET published = TRUE
-  WHERE id = $1 AND owner_id = $2
+  WHERE id = $1
+    AND owner_id = $2
+    AND (
+      SELECT COUNT(*)
+      FROM rental_listing_image
+      WHERE rental_listing_id = rental_listing.id
+    ) > 0
   RETURNING
     id,
     owner_id AS "ownerId",
@@ -60,6 +66,7 @@ const publishListingQuery = `
 const createImageQuery = `
   INSERT INTO rental_listing_image (rental_listing_id, image_path, display_order)
   VALUES ($1, $2, $3)
+  ON CONFLICT DO NOTHING
   RETURNING id, image_path AS "imagePath", display_order AS "displayOrder"
 `
 
@@ -104,7 +111,7 @@ export const publishListing = async (
 export const createListingImage = async (
   listingId: string,
   input: ImageUploadInput
-): Promise<ListingImage> => {
+): Promise<ListingImage | undefined> => {
   const result = await pool.query<ListingImage>(createImageQuery, [
     listingId,
     input.objectKey,
