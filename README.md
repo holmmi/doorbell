@@ -104,6 +104,24 @@ Start backend:
 npm run dev --workspace=doorbell-backend
 ```
 
+## Rental listing API
+
+See [the listing API guide](docs/api/listings.md) for creating, editing and
+publishing listings, including photo upload, replacement, removal and ordering.
+All listing routes require a landlord bearer token and restrict access to the
+listing owner. Apply migration `V3__listing_image_updates.sql` before running
+the updated backend (`docker compose run --rm flyway`). Existing finalized
+images are preserved; request a new pre-signed URL for any upload that was
+started before this migration.
+
+The backend checks its persistent image cleanup queue at startup and every
+minute. Removed/replaced objects are deleted after a 15-minute grace period
+so old upload URLs have expired. Failed deletions retry after five minutes;
+unfinalized uploads expire after 24 hours and are also cleaned up. The storage
+credentials need `PutObject`, `HeadObject`/`GetObject`, and `DeleteObject`
+permissions for the configured bucket. Keep at least one backend instance
+running to process cleanup. Queue entries survive backend restarts.
+
 ## Building, linting, and testing
 
 Run `npm run lint` to lint both workspaces, and `npm run build` to build both workspaces.
@@ -113,6 +131,12 @@ Run the backend tests from the repository root:
 ```shell
 npm test --workspace=doorbell-backend
 ```
+
+Listing route tests apply the real SQL migrations to an in-memory PostgreSQL
+instance using PGlite and stub S3 responses. They cover ownership, publication,
+ordering constraints, transactional rollback and storage cleanup without a
+running PostgreSQL server or S3Mock. PGlite uses one connection, so these tests
+do not simulate simultaneous PostgreSQL connections or actual S3 transfers.
 
 Application Docker images can be built with the following commands, for example:
 

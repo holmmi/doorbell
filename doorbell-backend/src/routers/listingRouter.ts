@@ -2,9 +2,11 @@ import { Router } from 'express'
 
 import {
   createRentalListing,
+  getRentalListing,
   presignListingImage,
   publishRentalListing,
   uploadListingImage,
+  updateRentalListing,
 } from '../controllers/listingController.js'
 import { authenticate } from '../middlewares/authenticate.js'
 import { requireRole } from '../middlewares/requireRole.js'
@@ -13,6 +15,7 @@ import {
   listingSchema,
   presignImageSchema,
   uploadImageSchema,
+  updateListingSchema,
 } from '../schemas/listing.js'
 
 const listingRouter = Router()
@@ -23,6 +26,13 @@ listingRouter.post(
   landlordOnly,
   validateRequestBody(listingSchema),
   createRentalListing
+)
+listingRouter.get('/:listingId', landlordOnly, getRentalListing)
+listingRouter.put(
+  '/:listingId',
+  landlordOnly,
+  validateRequestBody(updateListingSchema),
+  updateRentalListing
 )
 listingRouter.post(
   '/:listingId/images/presign',
