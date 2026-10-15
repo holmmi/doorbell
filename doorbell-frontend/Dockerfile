@@ -15,5 +15,6 @@ FROM nginx:1.31.6-alpine3.24
 RUN apk add --no-cache curl
 
 COPY --from=build /app/doorbell-frontend/dist /usr/share/nginx/html
+COPY doorbell-frontend/nginx.conf /etc/nginx/conf.d/default.conf
 
 EXPOSE 80
