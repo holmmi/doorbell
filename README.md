@@ -22,7 +22,7 @@ npm ci
 
 ### Starting the development servers
 
-Database:
+Start database, S3Mock and Flyway:
 
 ```shell
 docker compose up -d
@@ -41,10 +41,33 @@ The Flyway logs should end with a successful migration message. To stop the
 services, run `docker compose down`. Add `-v` when stopping if the local
 database data should also be removed.
 
-The backend loads PostgreSQL and JWT settings from
+Adobe S3Mock provides the local S3-compatible object store used by the backend.
+S3Mock listens on `localhost:9090`, does not require authentication,
+and accepts the dummy `test` credentials used by the AWS SDK.
+
+The Compose service creates the `doorbell` bucket automatically with
+`COM_ADOBE_TESTING_S3MOCK_STORE_INITIAL_BUCKETS`. To list the buckets through
+the S3 API:
+
+```shell
+curl http://localhost:9090/
+```
+
+S3Mock stores its data in the named `s3mock_data` Docker volume mounted at its
+writable `/s3mockroot` directory. The data is retained when the container
+stops. To remove the stored objects as well as the containers, use:
+
+```shell
+docker compose down -v
+```
+
+The backend uses the same S3 client configuration with a production
+S3-compatible service. Set `S3_FORCE_PATH_STYLE=false` when the provider does
+not require path-style requests.
+
+The backend loads PostgreSQL, JWT and S3 settings from
 `doorbell-backend/.env`. Create the `.env` file with the following
-content in the root of `doorbell-backend` directory to use the local
-development database:
+content in the root of `doorbell-backend`:
 
 ```dotenv
 DB_HOST=localhost
@@ -53,6 +76,12 @@ DB_NAME=doorbell
 DB_USER=doorbell
 DB_PASSWORD=doorbell
 JWT_SECRET=
+S3_ENDPOINT=http://localhost:9090
+S3_REGION=us-east-1
+S3_ACCESS_KEY=test
+S3_SECRET_KEY=test
+S3_BUCKET=doorbell
+S3_FORCE_PATH_STYLE=true
 ```
 
 Generate a secret with the following command, then set `JWT_SECRET` to its
@@ -73,36 +102,6 @@ Start backend:
 
 ```shell
 npm run dev --workspace=doorbell-backend
-```
-
-## Current account API
-
-Call `GET /api/user/info` with the access token returned by login in the
-`Authorization: Bearer <access-token>` header. Both tenants and landlords
-receive their own current account details with HTTP 200:
-
-```json
-{
-  "id": "9007199254740993",
-  "role": "TENANT",
-  "firstName": "Ada",
-  "lastName": "Example",
-  "email": "ada@example.com",
-  "phone": null,
-  "picturePath": null
-}
-```
-
-IDs are strings to preserve PostgreSQL `BIGINT` precision. `phone` and
-`picturePath` contain stored profile values or `null` when unset; registration
-currently leaves both unset. The response includes only these seven fields.
-Account IDs supplied in query parameters or a request body are ignored.
-
-Missing, invalid, or expired tokens and tokens for accounts that no longer
-exist receive HTTP 401 with:
-
-```json
-{ "error": "error.authentication.unauthorized" }
 ```
 
 ## Building, linting, and testing
