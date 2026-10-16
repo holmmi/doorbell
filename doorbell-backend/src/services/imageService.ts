@@ -1,8 +1,14 @@
-import { HeadObjectCommand, PutObjectCommand } from '@aws-sdk/client-s3'
+import {
+  DeleteObjectCommand,
+  HeadObjectCommand,
+  PutObjectCommand,
+  S3ServiceException,
+} from '@aws-sdk/client-s3'
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner'
 
 import { getObjectStorage } from '../config/objectStorage.js'
 import type { PresignedImage } from '../types/listing.js'
+import { RequestError } from '../utils/requestError.js'
 
 const uploadUrlLifetimeSeconds = 900
 const allowedContentTypes = new Set(['image/png', 'image/jpg', 'image/jpeg'])
@@ -38,15 +44,36 @@ export const createPresignedImageUpload = async (
   return { objectKey, uploadUrl, expiresIn: uploadUrlLifetimeSeconds }
 }
 
-export const verifyImageObject = async (objectKey: string): Promise<void> => {
+export const verifyImageObject = async (
+  objectKey: string,
+  expectedContentType: string
+): Promise<void> => {
   const { bucket, client } = getObjectStorage()
-  const object = await client.send(
-    new HeadObjectCommand({ Bucket: bucket, Key: objectKey })
-  )
-
-  if (!object.ContentType || !allowedContentTypes.has(object.ContentType)) {
-    throw new Error('Unsupported image content type')
+  try {
+    const object = await client.send(
+      new HeadObjectCommand({ Bucket: bucket, Key: objectKey })
+    )
+    if (
+      object.ContentType !== expectedContentType ||
+      !allowedContentTypes.has(object.ContentType) ||
+      !object.ContentLength
+    ) {
+      throw new RequestError(400, 'error.listing.image.invalidObject')
+    }
+  } catch (error) {
+    if (
+      error instanceof S3ServiceException &&
+      error.$metadata.httpStatusCode === 404
+    ) {
+      throw new RequestError(409, 'error.listing.image.notUploaded')
+    }
+    throw error
   }
+}
+
+export const deleteImageObject = async (objectKey: string): Promise<void> => {
+  const { bucket, client } = getObjectStorage()
+  await client.send(new DeleteObjectCommand({ Bucket: bucket, Key: objectKey }))
 }
 
 export const isListingKey = (objectKey: string, listingId: string): boolean =>

@@ -27,6 +27,7 @@
     "test": "npm run typecheck && node --import tsx --test \"src/**/tests/*.test.ts\""
   },
   "devDependencies": {
+    "@electric-sql/pglite": "0.5.10",
     "@types/bcrypt": "6.0.0",
     "@types/express": "5.0.6",
     "@types/jsonwebtoken": "9.0.10",

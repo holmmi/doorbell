@@ -43,6 +43,21 @@ export interface ListingImage {
   displayOrder: number
 }
 
+export interface ListingDetails extends Listing {
+  ready: boolean
+  images: ListingImage[]
+}
+
+export interface ListingImageInput {
+  id?: string
+  objectKey?: string
+  displayOrder: number
+}
+
+export interface ListingUpdateInput extends ListingInput {
+  images?: ListingImageInput[]
+}
+
 export interface PresignedImage {
   objectKey: string
   uploadUrl: string

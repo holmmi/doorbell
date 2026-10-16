@@ -65,6 +65,11 @@ and run through Node's test runner with `tsx`. The test command first
 type-checks both source and tests using `doorbell-backend/tsconfig.json`.
 The tests cover JWT configuration, verification, request validation, and
 middleware using an isolated Express app.
+`src/routers/tests/listing.test.ts` applies the actual Flyway migrations to
+PGlite (PostgreSQL in WASM), runs the listing routes against that database,
+and stubs S3 responses. It covers updates, image order constraints, rollback,
+ownership, publication, and cleanup. No database server or S3Mock is required;
+PGlite does not exercise concurrent PostgreSQL connections or real S3 transfers.
 `src/routers/tests/userInfo.test.ts` also exercises the actual `/api/user/info`
 route with isolated test environment variables and a stubbed PostgreSQL
 `pool.query`. It loads database configuration but never connects to PostgreSQL,
@@ -134,6 +139,16 @@ Both runtime images include `curl` for future healthchecks.
   `users/{userId}/{uuid}.{extension}` for profile pictures. Only PNG, JPG, and
   JPEG uploads are supported by the current image service. Publication requires
   at least one image to be finalized successfully.
+- Listing updates use complete basic details and an optional complete `images`
+  set. Omitting `images` preserves it; an empty set unpublishes. The owner GET
+  and PUT responses include sorted images and computed readiness. See
+  `docs/api/listings.md` for the API contract and request examples.
+- All listing mutations lock the parent row in a transaction. Migration V3
+  makes image order uniqueness deferrable for safe swaps, records issued uploads
+  for finalization, and adds a durable storage cleanup queue. Uploads expire
+  after 24 hours. `src/services/imageCleanupService.ts` starts with the backend
+  and retries cleanup every minute; removed images have a 15-minute grace
+  period and storage failures retry after five minutes.
 - The backend depends on the pinned AWS SDK S3 client and presigner packages;
   update `package-lock.json` whenever those dependencies change.
 - Root `package.json` defines the workspaces and shared `lint`/`build` scripts;

@@ -1,4 +1,5 @@
 import app from './app.js'
+import { startImageCleanup } from './services/imageCleanupService.js'
 
 const PORT = 8001
 
@@ -7,5 +8,6 @@ app.listen(PORT, (error) => {
     console.error('Error starting the server', error)
   } else {
     console.log(`Server is running on port ${PORT}`)
+    startImageCleanup()
   }
 })

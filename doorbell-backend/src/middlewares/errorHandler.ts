@@ -1,5 +1,7 @@
 import type { ErrorRequestHandler } from 'express'
 
+import { RequestError } from '../utils/requestError.js'
+
 export const errorHandler: ErrorRequestHandler = (
   error,
   request,
@@ -8,6 +10,11 @@ export const errorHandler: ErrorRequestHandler = (
 ) => {
   if (response.headersSent) {
     next(error)
+    return
+  }
+
+  if (error instanceof RequestError) {
+    response.status(error.status).json({ error: error.message })
     return
   }
 
