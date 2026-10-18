@@ -13,6 +13,18 @@ const resources = {
       profile: {
         avatarAlt: 'Profile picture',
       },
+      error: {
+        listing: {
+          image: {
+            idOrKeyRequired: 'An image ID or object key is required.',
+            duplicate: {
+              id: 'The same image is listed more than once.',
+              objectKey: 'The same upload is used more than once.',
+              displayOrder: 'Each image must have a different position.',
+            },
+          },
+        },
+      },
       home: {
         title: 'Find your next home, one swipe at a time',
         subtitle: 'Like a home and the landlord gets a ring.',

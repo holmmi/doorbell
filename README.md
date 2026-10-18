@@ -104,6 +104,11 @@ Start backend:
 npm run dev --workspace=doorbell-backend
 ```
 
+## Documentation
+
+- [Users and authentication API](docs/api/users.md)
+- [Rental listing API](docs/api/listings.md)
+
 ## Building, linting, and testing
 
 Run `npm run lint` to lint both workspaces, and `npm run build` to build both workspaces.
@@ -113,6 +118,33 @@ Run the backend tests from the repository root:
 ```shell
 npm test --workspace=doorbell-backend
 ```
+
+Listing route tests apply the real SQL migrations to an in-memory PostgreSQL
+instance using PGlite and stub S3 responses. They cover ownership, publication,
+ordering constraints, transactional rollback and storage cleanup without a
+running PostgreSQL server or S3Mock. PGlite uses one connection, so these tests
+do not simulate simultaneous PostgreSQL connections or actual S3 transfers.
+
+Run the focused integration suite with Docker running (Linux containers):
+
+```shell
+npm run test:integration --workspace=doorbell-backend
+```
+
+Testcontainers starts disposable PostgreSQL 18.6 and Adobe S3Mock 5.2.3 containers
+on random ports, applies the SQL migration files, and removes the containers
+afterward. No `docker compose up` or development `.env` is needed. The first run
+downloads the images and takes longer. A missing container runtime fails the
+command rather than skipping the tests. On Windows PowerShell, use `npm.cmd`
+if execution policy blocks `npm.ps1`.
+
+The suite covers uploads through presigned URLs, finalization retry, replacement
+and removal with delayed object cleanup, image position swaps and commit-time
+rollback, and overlapping HTTP updates waiting on PostgreSQL row locks. The
+concurrency test observes database lock waiters instead of relying on timing.
+S3Mock exercises actual HTTP transfers but does not validate presigned URL
+signatures or expiration. The existing fast suite retains failure simulation
+coverage. CI runs both suites.
 
 Application Docker images can be built with the following commands, for example:
 

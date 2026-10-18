@@ -30,6 +30,35 @@ The root project is private, ESM, and requires Node.js >=24 and npm >=11. TypeSc
 used throughout. Generated `dist/` directories and dependencies are ignored;
 do not commit them.
 
+## API documentation
+
+API contracts and request/response examples live in `docs/api/`:
+
+- [Users and authentication](../docs/api/users.md): registration, login,
+  bearer tokens and current account information under `/api/user`.
+- [Rental listings](../docs/api/listings.md): listing creation, retrieval,
+  updates, image uploads, publication and cleanup under `/api/listing`.
+
+Update the relevant guide whenever an endpoint's request fields, responses,
+validation rules, authentication requirements or error behavior changes.
+Keep the README's Documentation section as links to these guides.
+
+## GitHub workflow
+
+Use the GitHub CLI (`gh`) for GitHub operations, including checking CI,
+reviewing pull requests, and creating pull requests. Prefer it over the GitHub
+connector or browser automation.
+
+Check CLI availability with `gh --version` and authentication with
+`gh auth status`. If `gh` is missing from PATH, check its installed location.
+Check for an existing pull request before creating one. For multiline PR
+descriptions, write the description to a UTF-8 file and pass `--body-file` to
+`gh pr create`.
+
+When asked to review a commit and open a PR if it is ready, complete the review
+and required checks, then create the PR if there are no blocking findings.
+The request already authorizes creating that PR.
+
 ## Required validation workflow
 
 Always run commands from the repository root and always run `npm ci` before
@@ -39,11 +68,13 @@ building or linting a fresh checkout. The lockfile is authoritative.
 npm ci
 npm run lint
 npm test --workspace=doorbell-backend
+npm run test:integration --workspace=doorbell-backend
 npm run build
 ```
 
 This is the CI sequence in `.github/workflows/ci.yml` (Ubuntu, Node 24):
-checkout, `npm ci`, `npm run lint`, backend tests, then `npm run build`. The workflow runs on
+checkout, `npm ci`, `npm run lint`, fast backend tests, Testcontainers integration
+tests, then `npm run build`. The workflow runs on
 pushes and pull requests. `npm run lint` runs ESLint in both workspaces. The
 root build runs the frontend build followed by the backend build. On the
 verified environment, install took about 6 seconds, lint passed, and build
@@ -65,10 +96,29 @@ and run through Node's test runner with `tsx`. The test command first
 type-checks both source and tests using `doorbell-backend/tsconfig.json`.
 The tests cover JWT configuration, verification, request validation, and
 middleware using an isolated Express app.
+`src/routers/tests/listing.test.ts` applies the actual Flyway migrations to
+PGlite (PostgreSQL in WASM), runs the listing routes against that database,
+and stubs S3 responses. It covers updates, image order constraints, rollback,
+ownership, publication, and cleanup. No database server or S3Mock is required;
+PGlite does not exercise concurrent PostgreSQL connections or real S3 transfers.
 `src/routers/tests/userInfo.test.ts` also exercises the actual `/api/user/info`
 route with isolated test environment variables and a stubbed PostgreSQL
 `pool.query`. It loads database configuration but never connects to PostgreSQL,
-so the automated test suite requires no running database.
+so the fast test suite requires no running database.
+
+`src/integration/listing.integration.test.ts` is a separate suite run with
+`npm run test:integration --workspace=doorbell-backend`. It requires a running
+Docker-compatible runtime with Linux containers and fails if none is available.
+Pinned `@testcontainers/postgresql` and `@testcontainers/s3mock` packages start
+disposable PostgreSQL 18.6 and Adobe S3Mock 5.2.3 containers on random ports.
+The suite applies the migration SQL files directly, configures the backend
+before importing it, and cleans up containers even after setup/test failures.
+It covers real uploads, finalization retry, object cleanup, reordering, deferred
+constraint rollback and concurrent HTTP updates. A test-only trigger and
+`pg_blocking_pids` coordinate concurrent transactions without fixed sleeps.
+The fast test glob deliberately excludes this directory. Keep the container
+image versions aligned with `docker-compose.yml`. No development services or
+`.env` are used. S3Mock does not validate presigned URL signatures or expiration.
 
 For a production smoke check, build first, then run these in separate terminals:
 
@@ -134,6 +184,16 @@ Both runtime images include `curl` for future healthchecks.
   `users/{userId}/{uuid}.{extension}` for profile pictures. Only PNG, JPG, and
   JPEG uploads are supported by the current image service. Publication requires
   at least one image to be finalized successfully.
+- Listing updates use complete basic details and an optional complete `images`
+  set. Omitting `images` preserves it; an empty set unpublishes. The owner GET
+  and PUT responses include sorted images and computed readiness. See
+  `docs/api/listings.md` for the API contract and request examples.
+- All listing mutations lock the parent row in a transaction. Migration V3
+  makes image order uniqueness deferrable for safe swaps, records issued uploads
+  for finalization, and adds a durable storage cleanup queue. Uploads expire
+  after 24 hours. `src/services/imageCleanupService.ts` starts with the backend
+  and retries cleanup every minute; removed images have a 15-minute grace
+  period and storage failures retry after five minutes.
 - The backend depends on the pinned AWS SDK S3 client and presigner packages;
   update `package-lock.json` whenever those dependencies change.
 - Root `package.json` defines the workspaces and shared `lint`/`build` scripts;
