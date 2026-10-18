@@ -59,7 +59,8 @@ const resources = {
           invalidCredentials: 'The email or password is incorrect.',
         },
         registration: {
-          userAlreadyExists: 'An error occurred registering the account. Please try again.',
+          userAlreadyExists:
+            'An error occurred registering the account. Please try again.',
         },
         validation: {
           server:
