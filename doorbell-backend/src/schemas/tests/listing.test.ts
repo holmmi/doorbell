@@ -70,9 +70,9 @@ void test('update schema accepts keep, add, replace, reorder and remove inputs',
     undefined,
     [],
     [
-      { id: '9007199254740993', displayOrder: 2 },
-      { objectKey: 'listings/42/new.png', displayOrder: 0 },
-      { id: '2', objectKey: 'listings/42/replacement.jpg', displayOrder: 1 },
+      { id: '9007199254740993', displayOrder: 3 },
+      { objectKey: 'listings/42/new.png', displayOrder: 1 },
+      { id: '2', objectKey: 'listings/42/replacement.jpg', displayOrder: 2 },
     ],
   ]) {
     assert.equal(
@@ -83,24 +83,25 @@ void test('update schema accepts keep, add, replace, reorder and remove inputs',
 })
 
 for (const images of [
-  [{ displayOrder: 0 }],
+  [{ displayOrder: 1 }],
+  [{ id: '1', displayOrder: 0 }],
   [{ id: '1', displayOrder: -1 }],
   [{ id: '1', displayOrder: 0.5 }],
   [{ id: '1', displayOrder: 2147483648 }],
-  [{ id: '9223372036854775808', displayOrder: 0 }],
-  [{ id: '01', displayOrder: 0 }],
-  [{ id: 'not-an-id', displayOrder: 0 }],
+  [{ id: '9223372036854775808', displayOrder: 1 }],
+  [{ id: '01', displayOrder: 1 }],
+  [{ id: 'not-an-id', displayOrder: 1 }],
   [
-    { id: '1', displayOrder: 0 },
-    { id: '2', displayOrder: 0 },
-  ],
-  [
-    { id: '1', displayOrder: 0 },
     { id: '1', displayOrder: 1 },
+    { id: '2', displayOrder: 1 },
   ],
   [
-    { objectKey: 'listings/42/same.png', displayOrder: 0 },
+    { id: '1', displayOrder: 1 },
+    { id: '1', displayOrder: 2 },
+  ],
+  [
     { objectKey: 'listings/42/same.png', displayOrder: 1 },
+    { objectKey: 'listings/42/same.png', displayOrder: 2 },
   ],
 ]) {
   void test(`update schema rejects invalid image sets: ${JSON.stringify(images)}`, () => {
@@ -139,14 +140,25 @@ void test('presign schema allows only supported image content types', () => {
   )
 })
 
-void test('image upload requires a non-negative display order', () => {
-  assert.equal(
-    uploadImageSchema.safeParse({
-      objectKey: 'listings/1/image.png',
-      displayOrder: -1,
-    }).success,
-    false
-  )
+void test('image upload requires a positive 32-bit integer display order', () => {
+  for (const displayOrder of [-1, 0, 0.5, 2147483648]) {
+    assert.equal(
+      uploadImageSchema.safeParse({
+        objectKey: 'listings/1/image.png',
+        displayOrder,
+      }).success,
+      false
+    )
+  }
+  for (const displayOrder of [1, 2147483647]) {
+    assert.equal(
+      uploadImageSchema.safeParse({
+        objectKey: 'listings/1/image.png',
+        displayOrder,
+      }).success,
+      true
+    )
+  }
 })
 
 void test('image keys are separated between listings and profile pictures', () => {

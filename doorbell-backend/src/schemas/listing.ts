@@ -2,14 +2,12 @@ import { z } from 'zod'
 
 import { rooms } from '../types/listing.js'
 
-export const listingIdSchema = z
+const imageIdSchema = z
   .string()
   .refine(
     (value) =>
       /^[1-9]\d{0,18}$/.test(value) && BigInt(value) <= 9223372036854775807n
   )
-
-const displayOrderSchema = z.number().int().nonnegative().max(2147483647)
 
 export const listingSchema = z.object({
   neighborhood: z.string().min(1),
@@ -27,17 +25,17 @@ export const presignImageSchema = z.object({
 
 export const uploadImageSchema = z.object({
   objectKey: z.string().min(1),
-  displayOrder: displayOrderSchema,
+  displayOrder: z.int32().positive(),
 })
 
 const listingImageSchema = z
   .object({
-    id: listingIdSchema.optional(),
+    id: imageIdSchema.optional(),
     objectKey: z.string().min(1).optional(),
-    displayOrder: displayOrderSchema,
+    displayOrder: z.int32().positive(),
   })
   .refine((image) => image.id !== undefined || image.objectKey !== undefined, {
-    message: 'An image ID or object key is required',
+    error: 'error.listing.image.idOrKeyRequired',
   })
 
 export const updateListingSchema = listingSchema.extend({
@@ -51,7 +49,7 @@ export const updateListingSchema = listingSchema.extend({
         if (new Set(values).size !== values.length) {
           context.addIssue({
             code: 'custom',
-            message: `Duplicate image ${field}`,
+            message: `error.listing.image.duplicate.${field}`,
           })
         }
       }

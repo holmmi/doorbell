@@ -7,7 +7,6 @@ import {
   registerListingImageUpload,
   withOwnedListing,
 } from '../repositories/listingRepository.js'
-import { listingIdSchema } from '../schemas/listing.js'
 import { createPresignedImageUpload } from '../services/imageService.js'
 import {
   finalizeListingImage,
@@ -21,11 +20,11 @@ import type {
 import { RequestError } from '../utils/requestError.js'
 
 const listingIdFromRequest = (request: Parameters<RequestHandler>[0]) => {
-  const result = listingIdSchema.safeParse(request.params.listingId)
-  if (!result.success) {
+  const listingId = Number(request.params.listingId)
+  if (!Number.isSafeInteger(listingId) || listingId <= 0) {
     throw new RequestError(404, 'error.listing.notFound')
   }
-  return result.data
+  return listingId.toString()
 }
 
 export const createRentalListing: RequestHandler = async (

@@ -104,23 +104,10 @@ Start backend:
 npm run dev --workspace=doorbell-backend
 ```
 
-## Rental listing API
+## Documentation
 
-See [the listing API guide](docs/api/listings.md) for creating, editing and
-publishing listings, including photo upload, replacement, removal and ordering.
-All listing routes require a landlord bearer token and restrict access to the
-listing owner. Apply migration `V3__listing_image_updates.sql` before running
-the updated backend (`docker compose run --rm flyway`). Existing finalized
-images are preserved; request a new pre-signed URL for any upload that was
-started before this migration.
-
-The backend checks its persistent image cleanup queue at startup and every
-minute. Removed/replaced objects are deleted after a 15-minute grace period
-so old upload URLs have expired. Failed deletions retry after five minutes;
-unfinalized uploads expire after 24 hours and are also cleaned up. The storage
-credentials need `PutObject`, `HeadObject`/`GetObject`, and `DeleteObject`
-permissions for the configured bucket. Keep at least one backend instance
-running to process cleanup. Queue entries survive backend restarts.
+- [Users and authentication API](docs/api/users.md)
+- [Rental listing API](docs/api/listings.md)
 
 ## Building, linting, and testing
 
@@ -137,6 +124,27 @@ instance using PGlite and stub S3 responses. They cover ownership, publication,
 ordering constraints, transactional rollback and storage cleanup without a
 running PostgreSQL server or S3Mock. PGlite uses one connection, so these tests
 do not simulate simultaneous PostgreSQL connections or actual S3 transfers.
+
+Run the focused integration suite with Docker running (Linux containers):
+
+```shell
+npm run test:integration --workspace=doorbell-backend
+```
+
+Testcontainers starts disposable PostgreSQL 18.6 and Adobe S3Mock 5.2.3 containers
+on random ports, applies the SQL migration files, and removes the containers
+afterward. No `docker compose up` or development `.env` is needed. The first run
+downloads the images and takes longer. A missing container runtime fails the
+command rather than skipping the tests. On Windows PowerShell, use `npm.cmd`
+if execution policy blocks `npm.ps1`.
+
+The suite covers uploads through presigned URLs, finalization retry, replacement
+and removal with delayed object cleanup, image position swaps and commit-time
+rollback, and overlapping HTTP updates waiting on PostgreSQL row locks. The
+concurrency test observes database lock waiters instead of relying on timing.
+S3Mock exercises actual HTTP transfers but does not validate presigned URL
+signatures or expiration. The existing fast suite retains failure simulation
+coverage. CI runs both suites.
 
 Application Docker images can be built with the following commands, for example:
 

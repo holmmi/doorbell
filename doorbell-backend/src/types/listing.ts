@@ -44,6 +44,10 @@ export interface ListingImage {
 }
 
 export interface ListingDetails extends Listing {
+  /**
+   * Eligible for publication: at least one finalized image exists.
+   * Pending uploads do not count. Publication itself is tracked by `published`.
+   */
   ready: boolean
   images: ListingImage[]
 }

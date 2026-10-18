@@ -138,8 +138,8 @@ beforeEach(async () => {
       (1, 1000, 40, 'Original', 'Espoo', '2026-10-01', 'Water 20', 'STUDIO', TRUE),
       (2, 900, 30, 'Other', 'Turku', '2026-10-01', '', 'STUDIO', FALSE);
     INSERT INTO rental_listing_image (rental_listing_id, image_path, display_order)
-      VALUES (1, '${oldKey}', 0), (1, '${secondKey}', 1),
-             (2, 'listings/2/other.png', 0);
+      VALUES (1, '${oldKey}', 1), (1, '${secondKey}', 2),
+             (2, 'listings/2/other.png', 1);
   `)
 })
 
@@ -256,7 +256,7 @@ for (const [method, path, body] of [
   ['GET', '/1', undefined],
   ['PUT', '/1', listingInput],
   ['POST', '/1/images/presign', { contentType: 'image/png' }],
-  ['POST', '/1/images', { objectKey: oldKey, displayOrder: 2 }],
+  ['POST', '/1/images', { objectKey: oldKey, displayOrder: 3 }],
   ['POST', '/1/publish', undefined],
 ] as const) {
   void test(`${method} ${path} enforces authentication, role and ownership`, async () => {
@@ -280,7 +280,19 @@ for (const [method, path, body] of [
   })
 }
 
-for (const id of ['999', 'invalid', '0', '-1', '01', '9223372036854775808']) {
+for (const id of [
+  '999',
+  'invalid',
+  '0',
+  '-1',
+  '1.5',
+  'NaN',
+  'Infinity',
+  '9007199254740992',
+  '9007199254740993',
+  '9223372036854775807',
+  '9223372036854775808',
+]) {
   void test(`missing or invalid listing ${id} returns 404`, async () => {
     const response = await request('PUT', `/${id}`, listingInput)
     assert.equal(response.status, 404)
@@ -288,12 +300,86 @@ for (const id of ['999', 'invalid', '0', '-1', '01', '9223372036854775808']) {
   })
 }
 
+void test('listing routes normalize numeric path IDs', async () => {
+  for (const id of ['01', '1.0', '1e0', '0x1']) {
+    const response = await request('PUT', `/${id}`, listingInput)
+    assert.equal(response.status, 200)
+    const listing = (await response.json()) as ListingDetails
+    assert.equal(listing.id, '1')
+  }
+})
+
+void test('listing routes accept the largest safe integer ID', async () => {
+  const id = '9007199254740991'
+  await db.query(
+    `INSERT INTO rental_listing (
+        id, owner_id, monthly_price, square_meters, neighborhood, city,
+        available_from, extra_costs, rooms
+      ) SELECT $1, owner_id, monthly_price, square_meters, neighborhood, city,
+          available_from, extra_costs, rooms
+        FROM rental_listing WHERE id = 1`,
+    [id]
+  )
+
+  const readResponse = await request('GET', `/${id}`)
+  assert.equal(readResponse.status, 200)
+  const original = (await readResponse.json()) as ListingDetails
+  assert.equal(original.id, id)
+
+  const updateResponse = await request('PUT', `/${id}`, listingInput)
+  assert.equal(updateResponse.status, 200)
+  const updated = (await updateResponse.json()) as ListingDetails
+  assert.equal(updated.id, id)
+  assert.equal(updated.city, listingInput.city)
+
+  const otherListing = await readListing()
+  assert.equal(otherListing.city, 'Espoo')
+})
+
 void test('invalid listing details return validation errors without writing', async () => {
   const before = await snapshot()
   const response = await request('PUT', '/1', { rent: -1 })
   assert.equal(response.status, 400)
   assert.ok('errors' in ((await response.json()) as object))
   assert.deepEqual(await snapshot(), before)
+})
+
+void test('missing image references return a translation key without writing', async () => {
+  const before = await snapshot()
+  const response = await request('PUT', '/1', {
+    ...listingInput,
+    images: [{ displayOrder: 1 }],
+  })
+
+  assert.equal(response.status, 400)
+  assert.deepEqual(await response.json(), {
+    errors: [
+      {
+        code: 'custom',
+        path: ['images', 0],
+        message: 'error.listing.image.idOrKeyRequired',
+      },
+    ],
+  })
+  assert.deepEqual(await snapshot(), before)
+  assert.equal(storageCalls.length, 0)
+})
+
+void test('zero image positions are rejected without changing listing or upload state', async () => {
+  const upload = await stageUpload()
+  const before = await snapshot()
+  assert.equal(
+    (
+      await request('POST', '/1/images', {
+        objectKey: upload.objectKey,
+        displayOrder: 0,
+      })
+    ).status,
+    400
+  )
+  assert.equal((await update([{ id: '1', displayOrder: 0 }])).status, 400)
+  assert.deepEqual(await snapshot(), before)
+  assert.equal(storageCalls.length, 0)
 })
 
 void test('presign records a scoped key without changing the committed listing', async () => {
@@ -332,14 +418,18 @@ void test('create flow still finalizes uploaded images and rejects duplicate fin
 
 void test('reorders all existing images safely across unique positions', async () => {
   const response = await update([
-    { id: '1', displayOrder: 1 },
-    { id: '2', displayOrder: 0 },
+    { id: '1', displayOrder: 2 },
+    { id: '2', displayOrder: 1 },
   ])
   assert.equal(response.status, 200)
   const listing = (await response.json()) as ListingDetails
   assert.deepEqual(
     listing.images.map((image) => image.id),
     ['2', '1']
+  )
+  assert.deepEqual(
+    listing.images.map((image) => image.displayOrder),
+    [1, 2]
   )
   assert.deepEqual((await readListing()).images, listing.images)
   assert.equal(listing.published, true)
@@ -349,8 +439,8 @@ void test('adds, replaces, removes and orders photos in one atomic update', asyn
   const replacement = await stageUpload()
   const addition = await stageUpload()
   const response = await update([
-    { id: '1', objectKey: replacement.objectKey, displayOrder: 1 },
-    { objectKey: addition.objectKey, displayOrder: 0 },
+    { id: '1', objectKey: replacement.objectKey, displayOrder: 2 },
+    { objectKey: addition.objectKey, displayOrder: 1 },
   ])
   assert.equal(response.status, 200)
   const listing = (await response.json()) as ListingDetails
@@ -387,7 +477,7 @@ void test('removing the final image unpublishes; adding later does not republish
   assert.equal((await request('POST', '/1/publish')).status, 409)
   const upload = await stageUpload()
   assert.equal(
-    (await update([{ objectKey: upload.objectKey, displayOrder: 0 }])).status,
+    (await update([{ objectKey: upload.objectKey, displayOrder: 1 }])).status,
     200
   )
   assert.equal((await readListing()).published, false)
@@ -397,34 +487,48 @@ void test('removing the final image unpublishes; adding later does not republish
 
 void test('duplicate orders, IDs and keys fail validation without applying changes', async () => {
   const before = await snapshot()
-  for (const images of [
-    [
-      { id: '1', displayOrder: 0 },
-      { id: '2', displayOrder: 0 },
-    ],
-    [
-      { id: '1', displayOrder: 0 },
-      { id: '1', displayOrder: 1 },
-    ],
-    [
-      { objectKey: oldKey, displayOrder: 0 },
-      { objectKey: oldKey, displayOrder: 1 },
-    ],
+  for (const { images, message } of [
+    {
+      images: [
+        { id: '1', displayOrder: 1 },
+        { id: '2', displayOrder: 1 },
+      ],
+      message: 'error.listing.image.duplicate.displayOrder',
+    },
+    {
+      images: [
+        { id: '1', displayOrder: 1 },
+        { id: '1', displayOrder: 2 },
+      ],
+      message: 'error.listing.image.duplicate.id',
+    },
+    {
+      images: [
+        { objectKey: oldKey, displayOrder: 1 },
+        { objectKey: oldKey, displayOrder: 2 },
+      ],
+      message: 'error.listing.image.duplicate.objectKey',
+    },
   ]) {
-    assert.equal((await update(images)).status, 400)
+    const response = await update(images)
+    assert.equal(response.status, 400)
+    assert.deepEqual(await response.json(), {
+      errors: [{ code: 'custom', path: ['images'], message }],
+    })
   }
   assert.deepEqual(await snapshot(), before)
+  assert.equal(storageCalls.length, 0)
 })
 
 void test('foreign image IDs, foreign keys and unissued same-listing keys cannot be used', async () => {
   const before = await snapshot()
   for (const [image, status] of [
-    [{ id: '3', displayOrder: 0 }, 404],
-    [{ id: '999', displayOrder: 0 }, 404],
-    [{ objectKey: 'listings/2/other.png', displayOrder: 0 }, 400],
-    [{ objectKey: 'users/1/avatar.png', displayOrder: 0 }, 400],
-    [{ objectKey: 'listings/1/unissued.png', displayOrder: 0 }, 400],
-    [{ objectKey: 'listings/1/../2/other.png', displayOrder: 0 }, 400],
+    [{ id: '3', displayOrder: 1 }, 404],
+    [{ id: '999', displayOrder: 1 }, 404],
+    [{ objectKey: 'listings/2/other.png', displayOrder: 1 }, 400],
+    [{ objectKey: 'users/1/avatar.png', displayOrder: 1 }, 400],
+    [{ objectKey: 'listings/1/unissued.png', displayOrder: 1 }, 400],
+    [{ objectKey: 'listings/1/../2/other.png', displayOrder: 1 }, 400],
   ] as const) {
     assert.equal((await update([image])).status, status)
   }
@@ -447,8 +551,8 @@ for (const failure of ['missing', 'empty', 'content-type', 'unavailable']) {
     if (failure === 'unavailable') failStorage = true
     const before = await snapshot()
     const response = await update([
-      { id: '1', objectKey: good.objectKey, displayOrder: 1 },
-      { objectKey: bad.objectKey, displayOrder: 0 },
+      { id: '1', objectKey: good.objectKey, displayOrder: 2 },
+      { objectKey: bad.objectKey, displayOrder: 1 },
     ])
     assert.equal(
       response.status,
@@ -460,7 +564,7 @@ for (const failure of ['missing', 'empty', 'content-type', 'unavailable']) {
     failStorage = false
     objects.set(bad.objectKey, { ContentType: 'image/png', ContentLength: 10 })
     assert.equal(
-      (await update([{ id: '1', objectKey: bad.objectKey, displayOrder: 0 }]))
+      (await update([{ id: '1', objectKey: bad.objectKey, displayOrder: 1 }]))
         .status,
       200
     )
@@ -473,7 +577,7 @@ void test('database failure rolls back image changes, cleanup tasks and consumed
   const before = await snapshot()
   failQuery = /UPDATE rental_listing SET/
   const response = await update([
-    { id: '1', objectKey: upload.objectKey, displayOrder: 0 },
+    { id: '1', objectKey: upload.objectKey, displayOrder: 1 },
   ])
   assert.equal(response.status, 500)
   assert.deepEqual(await snapshot(), before)
@@ -489,7 +593,7 @@ void test('deferred uniqueness is enforced at commit and rolls the transaction b
       )
       await createListingImage(client, '1', {
         objectKey: 'listings/1/duplicate.png',
-        displayOrder: 0,
+        displayOrder: 1,
       })
     }),
     { status: 409 }
@@ -502,27 +606,27 @@ void test('failed create-flow finalization leaves the upload available for retry
   const before = await snapshot()
   const response = await request('POST', '/1/images', {
     objectKey: upload.objectKey,
-    displayOrder: 2,
+    displayOrder: 3,
   })
   assert.equal(response.status, 409)
   assert.deepEqual(await snapshot(), before)
   objects.set(upload.objectKey, { ContentType: 'image/png', ContentLength: 10 })
   const conflict = await request('POST', '/1/images', {
     objectKey: upload.objectKey,
-    displayOrder: 0,
+    displayOrder: 1,
   })
   assert.equal(conflict.status, 409)
   assert.deepEqual(await snapshot(), before)
   const retry = await request('POST', '/1/images', {
     objectKey: upload.objectKey,
-    displayOrder: 2,
+    displayOrder: 3,
   })
   assert.equal(retry.status, 201)
 })
 
 void test('cleanup waits for URL expiry, retries storage failures and never deletes active images', async (t) => {
   t.mock.method(console, 'error', () => {})
-  assert.equal((await update([{ id: '2', displayOrder: 0 }])).status, 200)
+  assert.equal((await update([{ id: '2', displayOrder: 1 }])).status, 200)
   await cleanUpListingImages(deleteImageObject)
   assert.ok(objects.has(oldKey))
   await db.exec(
@@ -548,7 +652,7 @@ void test('cleanup waits for URL expiry, retries storage failures and never dele
   )
   assert.equal((await readListing()).published, true)
   assert.equal(
-    (await update([{ objectKey: oldKey, displayOrder: 0 }])).status,
+    (await update([{ objectKey: oldKey, displayOrder: 1 }])).status,
     400
   )
 })
@@ -560,7 +664,7 @@ void test('expired staged uploads cannot finalize and are eventually cleaned up'
   )
   const before = await readListing()
   assert.equal(
-    (await update([{ objectKey: upload.objectKey, displayOrder: 0 }])).status,
+    (await update([{ objectKey: upload.objectKey, displayOrder: 1 }])).status,
     400
   )
   assert.deepEqual(await readListing(), before)
@@ -574,7 +678,7 @@ void test('expired staged uploads cannot finalize and are eventually cleaned up'
 })
 
 void test('cleanup can retry after storage deletion succeeds but the database write fails', async () => {
-  assert.equal((await update([{ id: '2', displayOrder: 0 }])).status, 200)
+  assert.equal((await update([{ id: '2', displayOrder: 1 }])).status, 200)
   await db.exec(
     "UPDATE listing_image_cleanup SET available_after = CURRENT_TIMESTAMP - INTERVAL '1 minute'"
   )

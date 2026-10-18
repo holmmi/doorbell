@@ -7,6 +7,17 @@ return 403. Missing listings, invalid listing IDs and another landlord's
 listings all return 404 with `{"error":"error.listing.notFound"}`. IDs are
 decimal strings to preserve PostgreSQL `BIGINT` precision.
 
+Listing path IDs are parsed as numbers and must be positive safe integers
+(at most 9,007,199,254,740,991). They are normalized to decimal strings before
+database access. Values outside this range return 404.
+
+## Database migration
+
+Apply migration `V3__listing_image_updates.sql` before running the updated
+backend (`docker compose run --rm flyway`). Existing finalized images are
+preserved and renumbered from 1 in their existing display order; request a new
+pre-signed URL for any upload that was started before this migration.
+
 ## Create and read
 
 `POST /api/listing` accepts the basic fields below and returns HTTP 201 with
@@ -58,7 +69,7 @@ Both GET and successful PUT return HTTP 200 with this shape:
     {
       "id": "100",
       "imagePath": "listings/42/0325629b-0cf9-4f9c-9488-bdf8f1f479dd.png",
-      "displayOrder": 0
+      "displayOrder": 1
     }
   ]
 }
@@ -106,14 +117,15 @@ For an individual addition, `POST /api/listing/42/images` remains supported:
 ```json
 {
   "objectKey": "listings/42/5b5792cf-4f5c-4015-b436-fc373616f1ad.png",
-  "displayOrder": 1
+  "displayOrder": 2
 }
 ```
 
 It returns HTTP 201 with `{id, imagePath, displayOrder}`. The position must be
-unused. If adding a photo should also move existing photos, use the atomic
-PUT instead. A failed finalization leaves the staged upload available for retry
-until 24 hours after pre-signing. Abandoned uploads are then cleaned up.
+a positive integer from 1 to 2,147,483,647 and unused. If adding a photo should
+also move existing photos, use the atomic PUT instead. A failed finalization
+leaves the staged upload available for retry until 24 hours after pre-signing.
+Abandoned uploads are then cleaned up.
 
 ## Replace, remove and reorder photos atomically
 
@@ -141,15 +153,15 @@ adds a third image and removes every other current image:
   "squareMeters": 42.5,
   "rooms": "ONE_ROOM_AND_KITCHEN",
   "images": [
-    { "id": "101", "displayOrder": 0 },
+    { "id": "101", "displayOrder": 1 },
     {
       "id": "100",
       "objectKey": "listings/42/5b5792cf-4f5c-4015-b436-fc373616f1ad.png",
-      "displayOrder": 1
+      "displayOrder": 2
     },
     {
       "objectKey": "listings/42/697ef789-e416-44d5-a202-791e0ff67089.jpeg",
-      "displayOrder": 2
+      "displayOrder": 3
     }
   ]
 }
@@ -159,7 +171,7 @@ Request a separate pre-signed URL for each new/replacement photo. Do not send
 an existing `imagePath` as `objectKey` to retain it; use its `id` instead.
 For a reorder alone, send every existing image ID with its new position and
 the complete basic details. IDs, keys and orders must each be unique within
-the request. Orders must be integers from 0 to 2,147,483,647; gaps are allowed.
+the request. Orders must be integers from 1 to 2,147,483,647; gaps are allowed.
 The request array's order does not matter. Responses always sort by display order.
 
 The backend locks the listing, verifies every supplied ID and upload, then
@@ -191,7 +203,19 @@ publication. It returns 409 if there are no finalized photos.
 ## Errors and cleanup
 
 Validation errors return HTTP 400 with the existing `{ "errors": [...] }`
-Zod issue array. Other expected failures use `{ "error": "<translation-key>" }`:
+Zod issue array. An image entry without either `id` or `objectKey` produces
+a custom issue at `path: ["images", <index>]` whose `message` is the translation
+key `error.listing.image.idOrKeyRequired`. The client can translate that key
+using its active language. The response field remains `message` even though
+the schema uses Zod's `error` option.
+
+Duplicate image IDs, upload keys and positions produce custom issues at
+`path: ["images"]`. Their `message` values are, respectively,
+`error.listing.image.duplicate.id`, `error.listing.image.duplicate.objectKey`
+and `error.listing.image.duplicate.displayOrder`. These are also translation
+keys. Zod's `context.addIssue()` uses the `message` property for these issues.
+
+Other expected failures use `{ "error": "<translation-key>" }`:
 
 | Status | Error                                  | Meaning                                                  |
 | ------ | -------------------------------------- | -------------------------------------------------------- |
@@ -210,3 +234,7 @@ failed deletions retry after five minutes. Expired staged uploads are also
 queued and removed. S3 deletion is idempotent, and a database failure after
 deletion leaves a durable task for retry. Cleanup failure does not undo a
 successful listing edit or leave an image record pointing to a deleted object.
+
+The storage credentials need `PutObject`, `HeadObject`/`GetObject`, and
+`DeleteObject` permissions for the configured bucket. Keep at least one backend
+instance running to process cleanup. Queue entries survive backend restarts.

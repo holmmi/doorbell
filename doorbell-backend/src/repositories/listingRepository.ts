@@ -78,6 +78,9 @@ export const withOwnedListing = async <T>(
     return value
   } catch (error) {
     await client.query('ROLLBACK')
+    // PostgreSQL SQLSTATE 23505 means unique_violation, for example when two
+    // images share a display order in one listing. Deferred checks can raise it
+    // at COMMIT; after rollback, report the conflict as HTTP 409.
     if (error instanceof Error && 'code' in error && error.code === '23505') {
       throw new RequestError(409, 'error.listing.image.conflict')
     }
