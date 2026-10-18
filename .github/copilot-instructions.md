@@ -6,8 +6,10 @@ Doorbell is a small TypeScript monorepo for a Doorbell application. It currently
 contains a React 19 frontend built with Vite and an Express 5 backend. The
 repository uses npm workspaces:
 
-- `doorbell-frontend/`: Vite/React client. The current screen is the starter UI
-  in `src/App.tsx`; its entry point is `src/main.tsx`.
+- `doorbell-frontend/`: Vite/React client. `src/App.tsx` defines the application
+  routes; `/login` and `/registration` render outside `AppShell`. Auth forms use
+  React Hook Form with Zod via `@hookform/resolvers`; reusable JSON API clients
+  and user auth methods live under `src/api/`.
 - `doorbell-backend/`: Express server. `src/app.ts` creates and exports the app;
   `src/index.ts` starts it on port 8001.
 - Backend user routes live in `src/routers/userRouter.ts` under `/api/user`.

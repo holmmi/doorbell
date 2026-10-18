@@ -1,5 +1,17 @@
 import { createTheme } from '@mui/material/styles'
 
+declare module '@mui/material/styles' {
+  interface Palette {
+    authPanelShadow: string
+    selectedRoleBackground: string
+  }
+
+  interface PaletteOptions {
+    authPanelShadow?: string
+    selectedRoleBackground?: string
+  }
+}
+
 const palette = {
   primary: {
     main: '#6E44FF',
@@ -30,6 +42,8 @@ const palette = {
     secondary: '#605A75',
     tertiary: '#FFFFFF',
   },
+  authPanelShadow: 'rgba(26, 26, 46, 0.06)',
+  selectedRoleBackground: 'rgba(110, 68, 255, 0.08)',
 }
 
 export const theme = createTheme({

@@ -2,7 +2,9 @@ import { AppBar, Box, Container, Toolbar, Typography } from '@mui/material'
 import { useTheme } from '@mui/material/styles'
 import { NavLink, Outlet } from 'react-router'
 import { useTranslation } from 'react-i18next'
+import { getToken } from '../api/client'
 import { DoorbellLogo } from './DoorbellLogo'
+import { LoginNavLink } from './LoginNavLink'
 import { MatchesBadge } from './MatchesBadge'
 import { ProfileAvatar } from './ProfileAvatar'
 
@@ -15,6 +17,7 @@ const navItems = [
 export function AppShell() {
   const { t } = useTranslation()
   const theme = useTheme()
+  const isLoggedIn = Boolean(getToken())
 
   return (
     <Box sx={{ minHeight: '100vh', backgroundColor: 'background.default' }}>
@@ -56,40 +59,51 @@ export function AppShell() {
               mr: { xs: 0, md: 2 },
             }}
           >
-            {navItems.map((item) => (
-              <NavLink
-                key={item.key}
-                to={item.to}
-                style={({ isActive }) => ({
-                  color: isActive
-                    ? theme.palette.primary.main
-                    : theme.palette.text.secondary,
-                  fontWeight: 700,
-                  textDecoration: 'none',
+            {navItems
+              .filter((item) => isLoggedIn || item.key === 'home')
+              .map((item) => (
+                <NavLink
+                  key={item.key}
+                  to={item.to}
+                  style={({ isActive }) => ({
+                    color: isActive
+                      ? theme.palette.primary.main
+                      : theme.palette.text.secondary,
+                    fontWeight: 700,
+                    textDecoration: 'none',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 8,
+                    transition: 'color 0.2s ease',
+                  })}
+                >
+                  <Typography
+                    component="span"
+                    sx={{
+                      fontSize: { xs: '0.95rem', md: '1.2rem' },
+                      fontWeight: 700,
+                      letterSpacing: '-0.02em',
+                    }}
+                  >
+                    {t(`nav.${item.key}`)}
+                  </Typography>
+
+                  {item.key === 'matches' ? <MatchesBadge count={3} /> : null}
+                </NavLink>
+              ))}
+
+            {!isLoggedIn ? <LoginNavLink /> : null}
+            {isLoggedIn ? (
+              <Box
+                sx={{
                   display: 'inline-flex',
                   alignItems: 'center',
-                  gap: 8,
-                  transition: 'color 0.2s ease',
-                })}
+                  ml: { xs: -1, md: -2 },
+                }}
               >
-                <Typography
-                  component="span"
-                  sx={{
-                    fontSize: { xs: '0.95rem', md: '1.2rem' },
-                    fontWeight: 700,
-                    letterSpacing: '-0.02em',
-                  }}
-                >
-                  {t(`nav.${item.key}`)}
-                </Typography>
-
-                {item.key === 'matches' ? <MatchesBadge count={3} /> : null}
-              </NavLink>
-            ))}
-          </Box>
-
-          <Box sx={{ order: { xs: 2, md: 0 } }}>
-            <ProfileAvatar alt={t('profile.avatarAlt')} />
+                <ProfileAvatar alt={t('profile.avatarAlt')} />
+              </Box>
+            ) : null}
           </Box>
         </Toolbar>
       </AppBar>
