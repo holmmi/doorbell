@@ -43,6 +43,11 @@ export interface ListingImage {
   displayOrder: number
 }
 
+export interface ListingImageResponse {
+  id: string
+  displayOrder: number
+}
+
 export interface ListingDetails extends Listing {
   /**
    * Eligible for publication: at least one finalized image exists.
@@ -52,7 +57,12 @@ export interface ListingDetails extends Listing {
   images: ListingImage[]
 }
 
-export interface ListingFeedImage extends ListingImage {
+export interface ListingDetailsResponse extends Listing {
+  ready: boolean
+  images: ListingImageResponse[]
+}
+
+export interface ListingFeedImage extends ListingImageResponse {
   imageUrl: string
 }
 

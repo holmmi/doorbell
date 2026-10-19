@@ -276,17 +276,14 @@ void describe(
         assert.equal(response.status, 200)
         const listings = (await response.json()) as Array<{
           id: string
-          images: Array<{ imagePath: string; imageUrl: string }>
+          images: Array<{ imageUrl: string }>
         }>
         assert.equal(listings.length, 2)
         assert.deepEqual(
           listings.map((listing) => listing.id),
           [firstId, '2']
         )
-        assert.equal(
-          listings[0].images[0].imagePath,
-          'listings/1/public-first.png'
-        )
+        assert.equal('imagePath' in listings[0].images[0], false)
         assert.match(listings[0].images[0].imageUrl, /^http/)
       })
 
@@ -396,7 +393,6 @@ void describe(
         const finalized = (await response.json()) as ListingImage
         assert.deepEqual(finalized, {
           id: '1',
-          imagePath: image.objectKey,
           displayOrder: 1,
         })
         const listing = await readListing()
@@ -497,7 +493,7 @@ void describe(
         assert.equal(response.status, 200)
         const listing = (await response.json()) as ListingDetails
         assert.deepEqual(listing.images, [
-          { ...original, imagePath: replacement.objectKey },
+          { id: original.id, displayOrder: original.displayOrder },
         ])
         assert.equal(listing.published, true)
         assert.deepEqual(await readListing(), listing)
@@ -659,7 +655,11 @@ void describe(
             (await pool.query('SELECT * FROM listing_image_cleanup')).rowCount,
             0
           )
-          await head(first.imagePath)
+          const image = await pool.query<{ image_path: string }>(
+            'SELECT image_path FROM rental_listing_image WHERE id = $1',
+            [first.id]
+          )
+          await head(image.rows[0].image_path)
         } finally {
           await pool.query(
             'DROP TRIGGER conflict_listing_image_order ON rental_listing; DROP FUNCTION conflict_listing_image_order()'
@@ -738,7 +738,16 @@ void describe(
 
       void test('retired image objects are deleted only after the cleanup grace period', async () => {
         const first = await addImage(1)
-        const second = await addImage(2)
+        await addImage(2)
+        const imagePaths = await pool.query<{
+          id: string
+          image_path: string
+        }>(
+          `SELECT id, image_path
+           FROM rental_listing_image
+           WHERE rental_listing_id = 1
+           ORDER BY id`
+        )
         const replacement = await presign()
         await upload(replacement)
         assert.equal(
@@ -758,7 +767,7 @@ void describe(
         )
         assert.deepEqual(
           new Set(queued.rows.map((row) => row.object_key)),
-          new Set([first.imagePath, second.imagePath])
+          new Set(imagePaths.rows.map((row) => row.image_path))
         )
 
         const { cleanUpListingImages } =
@@ -766,14 +775,15 @@ void describe(
         const { deleteImageObject } =
           await import('../../services/imageService.js')
         await cleanUpListingImages(deleteImageObject)
-        await head(first.imagePath)
-        await head(second.imagePath)
+        for (const { image_path: imagePath } of imagePaths.rows) {
+          await head(imagePath)
+        }
         // Advance eligibility in the isolated database instead of waiting 15 minutes.
         await pool.query(
           "UPDATE listing_image_cleanup SET available_after = CURRENT_TIMESTAMP - INTERVAL '1 second'"
         )
         await cleanUpListingImages(deleteImageObject)
-        for (const key of [first.imagePath, second.imagePath]) {
+        for (const { image_path: key } of imagePaths.rows) {
           await assert.rejects(
             head(key),
             (error: unknown) =>

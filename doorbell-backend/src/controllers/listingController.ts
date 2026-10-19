@@ -18,7 +18,9 @@ import {
 } from '../services/listingService.js'
 import type {
   ImageUploadInput,
+  ListingDetails,
   ListingInput,
+  ListingDetailsResponse,
   ListingUpdateInput,
 } from '../types/listing.js'
 import { RequestError } from '../utils/requestError.js'
@@ -30,6 +32,16 @@ const listingIdFromRequest = (request: Parameters<RequestHandler>[0]) => {
   }
   return listingId.toString()
 }
+
+const listingImageResponse = (image: { id: string; displayOrder: number }) => ({
+  id: image.id,
+  displayOrder: image.displayOrder,
+})
+
+const listingResponse = (listing: ListingDetails): ListingDetailsResponse => ({
+  ...listing,
+  images: listing.images.map(listingImageResponse),
+})
 
 export const createRentalListing: RequestHandler = async (
   request,
@@ -48,7 +60,7 @@ export const getRentalListing: RequestHandler = async (request, response) => {
     request.auth?.userId as string,
     getListingDetails
   )
-  response.json(listing)
+  response.json(listingResponse(listing))
 }
 
 export const getRentalListingFeed: RequestHandler = async (
@@ -64,7 +76,7 @@ export const getRentalListingFeed: RequestHandler = async (
       ...listing,
       images: await Promise.all(
         listing.images.map(async (image) => ({
-          ...image,
+          ...listingImageResponse(image),
           imageUrl: await createPresignedImageDownload(image.imagePath),
         }))
       ),
@@ -82,7 +94,7 @@ export const updateRentalListing: RequestHandler = async (
     request.auth?.userId as string,
     request.body as ListingUpdateInput
   )
-  response.json(listing)
+  response.json(listingResponse(listing))
 }
 
 export const presignListingImage: RequestHandler = async (
@@ -117,7 +129,7 @@ export const uploadListingImage: RequestHandler = async (request, response) => {
     request.auth?.userId as string,
     request.body as ImageUploadInput
   )
-  response.status(201).json(image)
+  response.status(201).json(listingImageResponse(image))
 }
 
 export const publishRentalListing: RequestHandler = async (
