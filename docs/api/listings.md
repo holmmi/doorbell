@@ -34,12 +34,12 @@ listing responses.
   {
     "id": "42",
     "ownerId": "7",
-    "createdAt": "2026-10-15T00:00:00.000Z",
+    "createdAt": "2026-10-15",
     "monthlyPrice": "1250.00",
     "squareMeters": "42.50",
     "neighborhood": "Kallio",
     "city": "Helsinki",
-    "availableFrom": "2026-11-01T00:00:00.000Z",
+    "availableFrom": "2026-11-01",
     "extraCosts": "Water 25 EUR/month",
     "rooms": "ONE_ROOM_AND_KITCHEN",
     "published": true,
@@ -98,12 +98,12 @@ Both GET and successful PUT return HTTP 200 with this shape:
 {
   "id": "42",
   "ownerId": "7",
-  "createdAt": "2026-10-15T00:00:00.000Z",
+  "createdAt": "2026-10-15",
   "monthlyPrice": "1250.00",
   "squareMeters": "42.50",
   "neighborhood": "Kallio",
   "city": "Helsinki",
-  "availableFrom": "2026-11-01T00:00:00.000Z",
+  "availableFrom": "2026-11-01",
   "extraCosts": "Water 25 EUR/month",
   "rooms": "ONE_ROOM_AND_KITCHEN",
   "published": true,
@@ -117,9 +117,10 @@ Both GET and successful PUT return HTTP 200 with this shape:
 }
 ```
 
-Numeric database columns are returned as strings and dates use the existing
-node-postgres/Express date serialization. Unknown/protected input fields such as `ownerId`, `published`,
-`ready` and `createdAt` are stripped by the request schema.
+Numeric database columns are returned as strings. PostgreSQL `DATE` fields such
+as `createdAt` and `availableFrom` are returned as `YYYY-MM-DD` strings.
+Unknown/protected input fields such as `ownerId`, `published`, `ready` and
+`createdAt` are stripped by the request schema.
 
 ## Upload a new or replacement photo
 
