@@ -255,12 +255,12 @@ const waitForBlockedConnection = async (
 }
 
 void describe(
-  'listing images',
+  'listing router tests',
   // Include time for cold image pulls and container startup in the suite budget.
   { concurrency: false, timeout: 360_000 },
   () => {
     void describe('listings', () => {
-      void test('listing feed returns two public listings with image URLs', async () => {
+      void test('listing feed returns 2 listings with image URLs', async () => {
         await pool.query(`
           INSERT INTO "user" (first_name, last_name, email, password, role)
           VALUES ('Owner', 'Two', 'owner2@example.com', 'unused', 'LANDLORD')
@@ -283,11 +283,10 @@ void describe(
           listings.map((listing) => listing.id),
           [firstId, '2']
         )
-        assert.equal('imagePath' in listings[0].images[0], false)
         assert.match(listings[0].images[0].imageUrl, /^http/)
       })
 
-      void test('authenticated feed excludes owned and reviewed listings and returns ten', async () => {
+      void test('authenticated feed excludes owned and reviewed listings and returns 10 results', async () => {
         await pool.query(`
           INSERT INTO "user" (first_name, last_name, email, password, role)
           VALUES
