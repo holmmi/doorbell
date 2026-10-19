@@ -88,9 +88,9 @@ for (const images of [
   [{ id: '1', displayOrder: -1 }],
   [{ id: '1', displayOrder: 0.5 }],
   [{ id: '1', displayOrder: 2147483648 }],
-  [{ id: '9223372036854775808', displayOrder: 1 }],
-  [{ id: '01', displayOrder: 1 }],
-  [{ id: 'not-an-id', displayOrder: 1 }],
+  [{ id: '', displayOrder: 1 }],
+  [{ id: 1, displayOrder: 1 }],
+  [{ id: null, displayOrder: 1 }],
   [
     { id: '1', displayOrder: 1 },
     { id: '2', displayOrder: 1 },

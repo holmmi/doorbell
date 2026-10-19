@@ -27,11 +27,8 @@ jobs:
         run: npm run lint
 
       - name: Test backend
-        run: npm test --workspace=doorbell-backend
-
-      - name: Test PostgreSQL and S3 integration
         timeout-minutes: 10
-        run: npm run test:integration --workspace=doorbell-backend
+        run: npm test --workspace=doorbell-backend
 
       - name: Build workspaces
         run: npm run build

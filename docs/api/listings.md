@@ -174,6 +174,9 @@ the complete basic details. IDs, keys and orders must each be unique within
 the request. Orders must be integers from 1 to 2,147,483,647; gaps are allowed.
 The request array's order does not matter. Responses always sort by display order.
 
+Image IDs must be nonempty strings matching an image ID returned for this listing.
+Unknown IDs return 404; empty strings and non-string IDs return 400.
+
 The backend locks the listing, verifies every supplied ID and upload, then
 commits details and the complete image set in one transaction. A deferred
 unique constraint permits swaps without temporary conflicts. A failed object
