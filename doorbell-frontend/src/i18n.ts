@@ -16,11 +16,12 @@ const resources = {
       error: {
         listing: {
           image: {
-            idOrKeyRequired: 'An image ID or object key is required.',
+            idOrKeyRequired:
+              'We could not save one of your photos. Please remove it and add it again.',
             duplicate: {
               id: 'The same image is listed more than once.',
               objectKey: 'The same upload is used more than once.',
-              displayOrder: 'Each image must have a different position.',
+              displayOrder: 'Each image must have a different order.',
             },
           },
         },

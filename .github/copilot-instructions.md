@@ -41,7 +41,9 @@ API contracts and request/response examples live in `docs/api/`:
 
 Update the relevant guide whenever an endpoint's request fields, responses,
 validation rules, authentication requirements or error behavior changes.
-Keep the README's Documentation section as links to these guides.
+Keep API contracts out of `README.md`; its Documentation section should only
+link to these guides. Keep README testing guidance general: commands and
+prerequisites, without individual test scenarios or implementation details.
 
 ## GitHub workflow
 
@@ -68,13 +70,12 @@ building or linting a fresh checkout. The lockfile is authoritative.
 npm ci
 npm run lint
 npm test --workspace=doorbell-backend
-npm run test:integration --workspace=doorbell-backend
 npm run build
 ```
 
 This is the CI sequence in `.github/workflows/ci.yml` (Ubuntu, Node 24):
-checkout, `npm ci`, `npm run lint`, fast backend tests, Testcontainers integration
-tests, then `npm run build`. The workflow runs on
+checkout, `npm ci`, `npm run lint`, backend tests including Testcontainers
+integration tests, then `npm run build`. The workflow runs on
 pushes and pull requests. `npm run lint` runs ESLint in both workspaces. The
 root build runs the frontend build followed by the backend build. On the
 verified environment, install took about 6 seconds, lint passed, and build
@@ -96,27 +97,24 @@ and run through Node's test runner with `tsx`. The test command first
 type-checks both source and tests using `doorbell-backend/tsconfig.json`.
 The tests cover JWT configuration, verification, request validation, and
 middleware using an isolated Express app.
-`src/routers/tests/listing.test.ts` applies the actual Flyway migrations to
-PGlite (PostgreSQL in WASM), runs the listing routes against that database,
-and stubs S3 responses. It covers updates, image order constraints, rollback,
-ownership, publication, and cleanup. No database server or S3Mock is required;
-PGlite does not exercise concurrent PostgreSQL connections or real S3 transfers.
 `src/routers/tests/userInfo.test.ts` also exercises the actual `/api/user/info`
 route with isolated test environment variables and a stubbed PostgreSQL
 `pool.query`. It loads database configuration but never connects to PostgreSQL,
-so the fast test suite requires no running database.
+so that test file requires no running database.
 
-`src/integration/listing.integration.test.ts` is a separate suite run with
-`npm run test:integration --workspace=doorbell-backend`. It requires a running
+`src/routers/tests/listingRouter.integration.test.ts` runs with the other backend
+tests through `npm test --workspace=doorbell-backend`. It requires a running
 Docker-compatible runtime with Linux containers and fails if none is available.
 Pinned `@testcontainers/postgresql` and `@testcontainers/s3mock` packages start
 disposable PostgreSQL 18.6 and Adobe S3Mock 5.2.3 containers on random ports.
 The suite applies the migration SQL files directly, configures the backend
 before importing it, and cleans up containers even after setup/test failures.
-It covers real uploads, finalization retry, object cleanup, reordering, deferred
-constraint rollback and concurrent HTTP updates. A test-only trigger and
-`pg_blocking_pids` coordinate concurrent transactions without fixed sleeps.
-The fast test glob deliberately excludes this directory. Keep the container
+It groups API success and error cases by operation: listing creation, retrieval,
+updates, image uploads and publication, with separate background cleanup coverage.
+Test-only triggers exercise deferred constraint rollback and, with
+`pg_blocking_pids`, coordinate concurrent HTTP updates without fixed sleeps.
+The integration suite sets `concurrency: false` so tests sharing its containers
+run sequentially; other test files run independently. Keep the container
 image versions aligned with `docker-compose.yml`. No development services or
 `.env` are used. S3Mock does not validate presigned URL signatures or expiration.
 

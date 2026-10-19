@@ -2,13 +2,6 @@ import { z } from 'zod'
 
 import { rooms } from '../types/listing.js'
 
-const imageIdSchema = z
-  .string()
-  .refine(
-    (value) =>
-      /^[1-9]\d{0,18}$/.test(value) && BigInt(value) <= 9223372036854775807n
-  )
-
 export const listingSchema = z.object({
   neighborhood: z.string().min(1),
   city: z.string().min(1),
@@ -30,7 +23,7 @@ export const uploadImageSchema = z.object({
 
 const listingImageSchema = z
   .object({
-    id: imageIdSchema.optional(),
+    id: z.string().min(1).optional(),
     objectKey: z.string().min(1).optional(),
     displayOrder: z.int32().positive(),
   })
