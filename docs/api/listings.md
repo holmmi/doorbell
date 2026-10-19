@@ -111,7 +111,8 @@ Both GET and successful PUT return HTTP 200 with this shape:
   "images": [
     {
       "id": "100",
-      "displayOrder": 1
+      "displayOrder": 1,
+      "imageUrl": "<pre-signed S3 GET URL>"
     }
   ]
 }
@@ -163,7 +164,7 @@ For an individual addition, `POST /api/listing/42/images` remains supported:
 }
 ```
 
-It returns HTTP 201 with `{id, displayOrder}`. The position must be
+It returns HTTP 201 with `{id, displayOrder, imageUrl}`. The position must be
 a positive integer from 1 to 2,147,483,647 and unused. If adding a photo should
 also move existing photos, use the atomic PUT instead. A failed finalization
 leaves the staged upload available for retry until 24 hours after pre-signing.

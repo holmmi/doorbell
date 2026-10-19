@@ -46,6 +46,7 @@ export interface ListingImage {
 export interface ListingImageResponse {
   id: string
   displayOrder: number
+  imageUrl: string
 }
 
 export interface ListingDetails extends Listing {

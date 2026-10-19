@@ -33,14 +33,21 @@ const listingIdFromRequest = (request: Parameters<RequestHandler>[0]) => {
   return listingId.toString()
 }
 
-const listingImageResponse = (image: { id: string; displayOrder: number }) => ({
+const listingImageResponse = async (image: {
+  id: string
+  imagePath: string
+  displayOrder: number
+}) => ({
   id: image.id,
   displayOrder: image.displayOrder,
+  imageUrl: await createPresignedImageDownload(image.imagePath),
 })
 
-const listingResponse = (listing: ListingDetails): ListingDetailsResponse => ({
+const listingResponse = async (
+  listing: ListingDetails
+): Promise<ListingDetailsResponse> => ({
   ...listing,
-  images: listing.images.map(listingImageResponse),
+  images: await Promise.all(listing.images.map(listingImageResponse)),
 })
 
 export const createRentalListing: RequestHandler = async (
@@ -60,7 +67,7 @@ export const getRentalListing: RequestHandler = async (request, response) => {
     request.auth?.userId as string,
     getListingDetails
   )
-  response.json(listingResponse(listing))
+  response.json(await listingResponse(listing))
 }
 
 export const getRentalListingFeed: RequestHandler = async (
@@ -74,12 +81,7 @@ export const getRentalListingFeed: RequestHandler = async (
   const result = await Promise.all(
     listings.map(async (listing) => ({
       ...listing,
-      images: await Promise.all(
-        listing.images.map(async (image) => ({
-          ...listingImageResponse(image),
-          imageUrl: await createPresignedImageDownload(image.imagePath),
-        }))
-      ),
+      images: await Promise.all(listing.images.map(listingImageResponse)),
     }))
   )
   response.json(result)
@@ -94,7 +96,7 @@ export const updateRentalListing: RequestHandler = async (
     request.auth?.userId as string,
     request.body as ListingUpdateInput
   )
-  response.json(listingResponse(listing))
+  response.json(await listingResponse(listing))
 }
 
 export const presignListingImage: RequestHandler = async (
@@ -129,7 +131,7 @@ export const uploadListingImage: RequestHandler = async (request, response) => {
     request.auth?.userId as string,
     request.body as ImageUploadInput
   )
-  response.status(201).json(listingImageResponse(image))
+  response.status(201).json(await listingImageResponse(image))
 }
 
 export const publishRentalListing: RequestHandler = async (

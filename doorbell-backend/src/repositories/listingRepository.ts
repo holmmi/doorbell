@@ -15,12 +15,12 @@ import { RequestError } from '../utils/requestError.js'
 const listingColumns = `
   id,
   owner_id AS "ownerId",
-  created_at AS "createdAt",
+  created_at::text AS "createdAt",
   monthly_price AS "monthlyPrice",
   square_meters AS "squareMeters",
   neighborhood,
   city,
-  available_from AS "availableFrom",
+  available_from::text AS "availableFrom",
   extra_costs AS "extraCosts",
   rooms,
   published

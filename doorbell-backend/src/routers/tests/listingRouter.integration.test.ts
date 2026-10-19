@@ -26,6 +26,7 @@ import type { Pool } from 'pg'
 
 import type {
   ListingDetails,
+  ListingDetailsResponse,
   ListingImage,
   ListingImageInput,
   PresignedImage,
@@ -198,7 +199,7 @@ const createListing = async () => {
 const readListing = async () => {
   const response = await request('GET', '/1')
   assert.equal(response.status, 200)
-  return (await response.json()) as ListingDetails
+  return (await response.json()) as ListingDetailsResponse
 }
 
 const update = (images: ListingImageInput[], neighborhood = 'Kallio') =>
@@ -343,20 +344,28 @@ void describe(
 
         const response = await request('GET', '/1')
         assert.equal(response.status, 200)
-        const listing = (await response.json()) as ListingDetails
+        const listing = (await response.json()) as ListingDetailsResponse
         assert.equal(listing.neighborhood, listingInput.neighborhood)
         assert.equal(listing.city, listingInput.city)
         assert.equal(listing.monthlyPrice, '1250.00')
         assert.equal(listing.squareMeters, '42.50')
         assert.equal(listing.rooms, listingInput.rooms)
+        assert.equal(listing.createdAt, '2026-10-19')
+        assert.equal(listing.availableFrom, listingInput.availableFrom)
         assert.equal(listing.ready, true)
-        assert.deepEqual(listing.images, [first, second])
+        assert.deepEqual(
+          listing.images.map(({ id, displayOrder }) => ({ id, displayOrder })),
+          [
+            { id: first.id, displayOrder: first.displayOrder },
+            { id: second.id, displayOrder: second.displayOrder },
+          ]
+        )
+        assert.match(listing.images[0].imageUrl, /^http/)
       })
 
       void test('updating listing details succeeds and preserves its images', async () => {
         await createListing()
         const image = await addImage(1)
-        const original = await readListing()
 
         const response = await request('PUT', '/1', {
           ...listingInput,
@@ -365,15 +374,20 @@ void describe(
           extraCosts: 'Water 25 EUR/month',
         })
         assert.equal(response.status, 200)
-        const listing = (await response.json()) as ListingDetails
-        assert.deepEqual(listing, {
-          ...original,
-          neighborhood: 'Kamppi',
-          monthlyPrice: '1400.00',
-          extraCosts: 'Water 25 EUR/month',
-          images: [image],
-        })
-        assert.deepEqual(await readListing(), listing)
+        const listing = (await response.json()) as ListingDetailsResponse
+        assert.equal(listing.neighborhood, 'Kamppi')
+        assert.equal(listing.monthlyPrice, '1400.00')
+        assert.equal(listing.extraCosts, 'Water 25 EUR/month')
+        assert.deepEqual(
+          listing.images.map(({ id, displayOrder }) => ({ id, displayOrder })),
+          [{ id: image.id, displayOrder: image.displayOrder }]
+        )
+        assert.match(listing.images[0].imageUrl, /^http/)
+        const current = await readListing()
+        assert.deepEqual(
+          current.images.map(({ id, displayOrder }) => ({ id, displayOrder })),
+          [{ id: image.id, displayOrder: image.displayOrder }]
+        )
       })
     })
 
@@ -389,15 +403,23 @@ void describe(
           displayOrder: 1,
         })
         assert.equal(response.status, 201)
-        const finalized = (await response.json()) as ListingImage
+        const finalized =
+          (await response.json()) as ListingDetailsResponse['images'][number]
+        assert.equal(finalized.id, '1')
+        assert.equal(finalized.displayOrder, 1)
+        assert.match(finalized.imageUrl, /^http/)
         assert.deepEqual(finalized, {
           id: '1',
           displayOrder: 1,
+          imageUrl: finalized.imageUrl,
         })
         const listing = await readListing()
         assert.equal(listing.ready, true)
         assert.equal(listing.published, false)
-        assert.deepEqual(listing.images, [finalized])
+        assert.deepEqual(
+          listing.images.map(({ id, displayOrder }) => ({ id, displayOrder })),
+          [{ id: finalized.id, displayOrder: finalized.displayOrder }]
+        )
         assert.equal(
           (await pool.query('SELECT * FROM rental_listing_image_upload'))
             .rowCount,
@@ -490,12 +512,16 @@ void describe(
           },
         ])
         assert.equal(response.status, 200)
-        const listing = (await response.json()) as ListingDetails
-        assert.deepEqual(listing.images, [
-          { id: original.id, displayOrder: original.displayOrder },
-        ])
+        const listing = (await response.json()) as ListingDetailsResponse
+        assert.equal(listing.images[0].id, original.id)
+        assert.equal(listing.images[0].displayOrder, original.displayOrder)
+        assert.match(listing.images[0].imageUrl, /^http/)
         assert.equal(listing.published, true)
-        assert.deepEqual(await readListing(), listing)
+        const current = await readListing()
+        assert.deepEqual(
+          current.images.map(({ id, displayOrder }) => ({ id, displayOrder })),
+          [{ id: original.id, displayOrder: original.displayOrder }]
+        )
       })
 
       void test('removing the last listing image succeeds and unpublishes the listing', async () => {
@@ -520,12 +546,22 @@ void describe(
           { id: second.id, displayOrder: 1 },
         ])
         assert.equal(response.status, 200)
-        const listing = (await response.json()) as ListingDetails
-        assert.deepEqual(listing.images, [
-          { ...second, displayOrder: 1 },
-          { ...first, displayOrder: 2 },
-        ])
-        assert.deepEqual(await readListing(), listing)
+        const listing = (await response.json()) as ListingDetailsResponse
+        assert.deepEqual(
+          listing.images.map(({ id, displayOrder }) => ({ id, displayOrder })),
+          [
+            { id: second.id, displayOrder: 1 },
+            { id: first.id, displayOrder: 2 },
+          ]
+        )
+        const current = await readListing()
+        assert.deepEqual(
+          current.images.map(({ id, displayOrder }) => ({ id, displayOrder })),
+          [
+            { id: second.id, displayOrder: 1 },
+            { id: first.id, displayOrder: 2 },
+          ]
+        )
       })
 
       void test('updating images rejects unknown IDs without changing the listing', async () => {
@@ -720,7 +756,13 @@ void describe(
           })
           const listing = await readListing()
           assert.equal(listing.neighborhood, 'First concurrent update')
-          assert.deepEqual(listing.images, [{ ...second, displayOrder: 1 }])
+          assert.deepEqual(
+            listing.images.map(({ id, displayOrder }) => ({
+              id,
+              displayOrder,
+            })),
+            [{ id: second.id, displayOrder: 1 }]
+          )
         } finally {
           await barrier.query('ROLLBACK')
           barrier.release()
