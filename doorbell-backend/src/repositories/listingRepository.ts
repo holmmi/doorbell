@@ -6,6 +6,7 @@ import type {
   ImageUploadInput,
   Listing,
   ListingDetails,
+  ListingFeedItem,
   ListingImage,
   ListingInput,
 } from '../types/listing.js'
@@ -108,6 +109,42 @@ export const getListingDetails = async (
 ): Promise<ListingDetails> => {
   const images = await findListingImages(client, listing.id)
   return { ...listing, ready: images.length > 0, images }
+}
+
+export const findListingFeed = async (
+  userId: string | undefined,
+  limit: number
+): Promise<ListingFeedItem[]> => {
+  const result = await pool.query<ListingFeedItem>(
+    `SELECT ${listingColumns}
+     FROM rental_listing AS listing
+     WHERE listing.published
+       AND ($1::BIGINT IS NULL OR listing.owner_id <> $1::BIGINT)
+       AND (
+         $1::BIGINT IS NULL OR NOT EXISTS (
+           SELECT 1
+           FROM rental_listing_preference AS preference
+           WHERE preference.tenant_user_id = $1::BIGINT
+             AND preference.rental_listing_id = listing.id
+         )
+       )
+     ORDER BY listing.id
+     LIMIT $2`,
+    [userId ?? null, limit]
+  )
+
+  const listings = await Promise.all(
+    result.rows.map(async (listing) => {
+      const images = await pool.query<ListingImage>(
+        `SELECT ${imageColumns} FROM rental_listing_image
+         WHERE rental_listing_id = $1 ORDER BY display_order, id`,
+        [listing.id]
+      )
+      return { ...listing, images: images.rows }
+    })
+  )
+
+  return listings
 }
 
 export const updateListing = async (

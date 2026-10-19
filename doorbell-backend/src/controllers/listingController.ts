@@ -2,12 +2,16 @@ import type { RequestHandler } from 'express'
 
 import {
   createListing,
+  findListingFeed,
   getListingDetails,
   publishListing,
   registerListingImageUpload,
   withOwnedListing,
 } from '../repositories/listingRepository.js'
-import { createPresignedImageUpload } from '../services/imageService.js'
+import {
+  createPresignedImageDownload,
+  createPresignedImageUpload,
+} from '../services/imageService.js'
 import {
   finalizeListingImage,
   updateRentalListingDetails,
@@ -45,6 +49,28 @@ export const getRentalListing: RequestHandler = async (request, response) => {
     getListingDetails
   )
   response.json(listing)
+}
+
+export const getRentalListingFeed: RequestHandler = async (
+  request,
+  response
+) => {
+  const listings = await findListingFeed(
+    request.auth?.userId,
+    request.auth?.userId ? 10 : 2
+  )
+  const result = await Promise.all(
+    listings.map(async (listing) => ({
+      ...listing,
+      images: await Promise.all(
+        listing.images.map(async (image) => ({
+          ...image,
+          imageUrl: await createPresignedImageDownload(image.imagePath),
+        }))
+      ),
+    }))
+  )
+  response.json(result)
 }
 
 export const updateRentalListing: RequestHandler = async (

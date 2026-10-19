@@ -52,6 +52,14 @@ export interface ListingDetails extends Listing {
   images: ListingImage[]
 }
 
+export interface ListingFeedImage extends ListingImage {
+  imageUrl: string
+}
+
+export interface ListingFeedItem extends Listing {
+  images: ListingImage[]
+}
+
 export interface ListingImageInput {
   id?: string
   objectKey?: string
