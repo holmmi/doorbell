@@ -1,6 +1,6 @@
 # Rental listings
 
-All routes are under `/api/listing` and require
+Management routes are under `/api/listing` and require
 `Authorization: Bearer <access-token>` from a current `LANDLORD` account.
 Missing/invalid authentication returns 401; accounts without the landlord role
 return 403. Missing listings, invalid listing IDs and another landlord's
@@ -10,6 +10,49 @@ decimal strings to preserve PostgreSQL `BIGINT` precision.
 Listing path IDs are parsed as numbers and must be positive safe integers
 (at most 9,007,199,254,740,991). They are normalized to decimal strings before
 database access. Values outside this range return 404.
+
+## Listing feed
+
+`GET /api/listing` returns published listings for the swipe experience. Without
+an `Authorization` header, it returns at most 2 listings. With a valid bearer
+token, it returns at most 10 listings, excludes the current user's own
+listings, and excludes every listing with an existing preference for that user,
+whether the preference is a like or a dislike. Listings are returned in
+ascending ID order.
+
+An invalid bearer token returns HTTP 401. Authenticated requests may use any
+valid user role; this endpoint is not restricted to landlords.
+
+Each listing includes its finalized images. The stored `imagePath` object key
+and `displayOrder` are preserved, and `imageUrl` is a separate pre-signed S3
+GET URL that can be used directly as an HTML image `src`. These URLs expire
+after 900 seconds and must be requested again when they expire.
+
+```json
+[
+  {
+    "id": "42",
+    "ownerId": "7",
+    "createdAt": "2026-10-15T00:00:00.000Z",
+    "monthlyPrice": "1250.00",
+    "squareMeters": "42.50",
+    "neighborhood": "Kallio",
+    "city": "Helsinki",
+    "availableFrom": "2026-11-01T00:00:00.000Z",
+    "extraCosts": "Water 25 EUR/month",
+    "rooms": "ONE_ROOM_AND_KITCHEN",
+    "published": true,
+    "images": [
+      {
+        "id": "100",
+        "imagePath": "listings/42/0325629b-0cf9-4f9c-9488-bdf8f1f479dd.png",
+        "displayOrder": 1,
+        "imageUrl": "<pre-signed S3 GET URL>"
+      }
+    ]
+  }
+]
+```
 
 ## Database migration
 
