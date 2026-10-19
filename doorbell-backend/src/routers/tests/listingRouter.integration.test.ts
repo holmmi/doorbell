@@ -155,6 +155,40 @@ const request = (method: string, path: string, body?: unknown) =>
     signal: AbortSignal.timeout(15_000),
   })
 
+const publicRequest = (method: string, path: string) =>
+  fetch(`${baseUrl}${path}`, {
+    method,
+    signal: AbortSignal.timeout(15_000),
+  })
+
+const requestAs = (authToken: string, method: string, path: string) =>
+  fetch(`${baseUrl}${path}`, {
+    method,
+    headers: {
+      Authorization: `Bearer ${authToken}`,
+      'Content-Type': 'application/json',
+    },
+    signal: AbortSignal.timeout(15_000),
+  })
+
+const seedPublishedListing = async (ownerId: number, imagePath: string) => {
+  const listing = await pool.query<{ id: string }>(
+    `INSERT INTO rental_listing (
+       owner_id, monthly_price, square_meters, neighborhood, city,
+       available_from, extra_costs, rooms, published
+     ) VALUES ($1, 1000, 40, 'Kallio', 'Helsinki', '2026-11-01', '', 'STUDIO', TRUE)
+     RETURNING id`,
+    [ownerId]
+  )
+  await pool.query(
+    `INSERT INTO rental_listing_image
+       (rental_listing_id, image_path, display_order)
+     VALUES ($1, $2, 1)`,
+    [listing.rows[0].id, imagePath]
+  )
+  return listing.rows[0].id
+}
+
 const createListing = async () => {
   const response = await request('POST', '', listingInput)
   assert.equal(response.status, 201)
@@ -226,6 +260,73 @@ void describe(
   { concurrency: false, timeout: 360_000 },
   () => {
     void describe('listings', () => {
+      void test('listing feed returns two public listings with image URLs', async () => {
+        await pool.query(`
+          INSERT INTO "user" (first_name, last_name, email, password, role)
+          VALUES ('Owner', 'Two', 'owner2@example.com', 'unused', 'LANDLORD')
+        `)
+        const firstId = await seedPublishedListing(
+          1,
+          'listings/1/public-first.png'
+        )
+        await seedPublishedListing(2, 'listings/2/public-second.png')
+        await seedPublishedListing(2, 'listings/2/public-third.png')
+
+        const response = await publicRequest('GET', '')
+        assert.equal(response.status, 200)
+        const listings = (await response.json()) as Array<{
+          id: string
+          images: Array<{ imagePath: string; imageUrl: string }>
+        }>
+        assert.equal(listings.length, 2)
+        assert.deepEqual(
+          listings.map((listing) => listing.id),
+          [firstId, '2']
+        )
+        assert.equal(
+          listings[0].images[0].imagePath,
+          'listings/1/public-first.png'
+        )
+        assert.match(listings[0].images[0].imageUrl, /^http/)
+      })
+
+      void test('authenticated feed excludes owned and reviewed listings and returns ten', async () => {
+        await pool.query(`
+          INSERT INTO "user" (first_name, last_name, email, password, role)
+          VALUES
+            ('Tenant', 'Two', 'tenant@example.com', 'unused', 'TENANT'),
+            ('Owner', 'Two', 'owner2@example.com', 'unused', 'LANDLORD')
+        `)
+        const ownedId = await seedPublishedListing(2, 'listings/2/owned.png')
+        const reviewedId = await seedPublishedListing(
+          1,
+          'listings/1/reviewed.png'
+        )
+        for (let index = 0; index < 10; index += 1) {
+          await seedPublishedListing(1, `listings/1/feed-${index}.png`)
+        }
+        await pool.query(
+          `INSERT INTO rental_listing_preference
+             (tenant_user_id, rental_listing_id, liked)
+           VALUES (2, $1, TRUE)`,
+          [reviewedId]
+        )
+
+        const { createAccessToken } = await import('../../utils/jwt.js')
+        const response = await requestAs(createAccessToken('2'), 'GET', '')
+        assert.equal(response.status, 200)
+        const listings = (await response.json()) as Array<{ id: string }>
+        assert.equal(listings.length, 10)
+        assert.equal(
+          listings.some((listing) => listing.id === ownedId),
+          false
+        )
+        assert.equal(
+          listings.some((listing) => listing.id === reviewedId),
+          false
+        )
+      })
+
       void test('creating a listing succeeds', async () => {
         const response = await request('POST', '', listingInput)
         assert.equal(response.status, 201)
