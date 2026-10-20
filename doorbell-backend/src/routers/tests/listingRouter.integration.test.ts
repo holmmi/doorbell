@@ -29,6 +29,7 @@ import type {
   ListingDetailsResponse,
   ListingImage,
   ListingImageInput,
+  ListingImageResponse,
   PresignedImage,
 } from '../../types/listing.js'
 
@@ -202,6 +203,23 @@ const readListing = async () => {
   return (await response.json()) as ListingDetailsResponse
 }
 
+const imageWithoutSignature = (image: ListingImageResponse) => {
+  const url = new URL(image.imageUrl)
+  // Fresh signatures can differ even when they refer to the same stored object.
+  url.search = ''
+  return { ...image, imageUrl: url.href }
+}
+
+const assertListingUnchanged = (
+  actual: ListingDetailsResponse,
+  expected: ListingDetailsResponse
+) => {
+  assert.deepEqual(
+    { ...actual, images: actual.images.map(imageWithoutSignature) },
+    { ...expected, images: expected.images.map(imageWithoutSignature) }
+  )
+}
+
 const update = (images: ListingImageInput[], neighborhood = 'Kallio') =>
   request('PUT', '/1', { ...listingInput, neighborhood, images })
 
@@ -339,6 +357,12 @@ void describe(
 
       void test('retrieving a listing succeeds and returns images in display order', async () => {
         await createListing()
+        const createdAt = '2026-10-19'
+        // Pin the stored date so this retrieval assertion is independent of CURRENT_DATE.
+        await pool.query(
+          'UPDATE rental_listing SET created_at = $1 WHERE id = $2',
+          [createdAt, '1']
+        )
         const second = await addImage(2)
         const first = await addImage(1)
 
@@ -350,7 +374,7 @@ void describe(
         assert.equal(listing.monthlyPrice, '1250.00')
         assert.equal(listing.squareMeters, '42.50')
         assert.equal(listing.rooms, listingInput.rooms)
-        assert.equal(listing.createdAt, '2026-10-19')
+        assert.equal(listing.createdAt, createdAt)
         assert.equal(listing.availableFrom, listingInput.availableFrom)
         assert.equal(listing.ready, true)
         assert.deepEqual(
@@ -449,7 +473,7 @@ void describe(
         assert.deepEqual(await response.json(), {
           error: 'error.listing.image.notUploaded',
         })
-        assert.deepEqual(await readListing(), original)
+        assertListingUnchanged(await readListing(), original)
         const pending = await pool.query<{ object_key: string }>(
           'SELECT object_key FROM rental_listing_image_upload'
         )
@@ -464,7 +488,11 @@ void describe(
 
         const response = await request('POST', '/1/images', body)
         assert.equal(response.status, 201)
-        assert.deepEqual((await readListing()).images, [await response.json()])
+        const finalized = (await response.json()) as ListingImageResponse
+        assert.deepEqual(
+          (await readListing()).images.map(imageWithoutSignature),
+          [imageWithoutSignature(finalized)]
+        )
         assert.equal(
           (await pool.query('SELECT * FROM rental_listing_image_upload'))
             .rowCount,
@@ -584,7 +612,7 @@ void describe(
           assert.deepEqual(await response.json(), {
             error: 'error.listing.image.notFound',
           })
-          assert.deepEqual(await readListing(), original)
+          assertListingUnchanged(await readListing(), original)
         }
       })
 
@@ -611,12 +639,14 @@ void describe(
               error.path[0] === 'images'
           )
         )
-        assert.deepEqual(await readListing(), original)
+        assertListingUnchanged(await readListing(), original)
       })
 
       void test('updating images fails when an upload is missing and preserves pending uploads', async () => {
         const first = await addImage(1)
         const original = await readListing()
+        // Cross a signing-second boundary to exercise comparison of refreshed URLs.
+        await delay(1_100)
         const replacement = await presign()
         await upload(replacement)
         const missing = await presign()
@@ -632,7 +662,7 @@ void describe(
         assert.deepEqual(await response.json(), {
           error: 'error.listing.image.notUploaded',
         })
-        assert.deepEqual(await readListing(), original)
+        assertListingUnchanged(await readListing(), original)
         const pending = await pool.query<{ object_key: string }>(
           'SELECT object_key FROM rental_listing_image_upload'
         )
@@ -679,7 +709,7 @@ void describe(
           assert.deepEqual(await response.json(), {
             error: 'error.listing.image.conflict',
           })
-          assert.deepEqual(await readListing(), original)
+          assertListingUnchanged(await readListing(), original)
           const pending = await pool.query<{ object_key: string }>(
             'SELECT object_key FROM rental_listing_image_upload'
           )
