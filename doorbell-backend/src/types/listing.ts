@@ -43,12 +43,31 @@ export interface ListingImage {
   displayOrder: number
 }
 
+export interface ListingImageResponse {
+  id: string
+  displayOrder: number
+  imageUrl: string
+}
+
 export interface ListingDetails extends Listing {
   /**
    * Eligible for publication: at least one finalized image exists.
    * Pending uploads do not count. Publication itself is tracked by `published`.
    */
   ready: boolean
+  images: ListingImage[]
+}
+
+export interface ListingDetailsResponse extends Listing {
+  ready: boolean
+  images: ListingImageResponse[]
+}
+
+export interface ListingFeedImage extends ListingImageResponse {
+  imageUrl: string
+}
+
+export interface ListingFeedItem extends Listing {
   images: ListingImage[]
 }
 

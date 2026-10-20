@@ -2,19 +2,25 @@ import type { RequestHandler } from 'express'
 
 import {
   createListing,
+  findListingFeed,
   getListingDetails,
   publishListing,
   registerListingImageUpload,
   withOwnedListing,
 } from '../repositories/listingRepository.js'
-import { createPresignedImageUpload } from '../services/imageService.js'
+import {
+  createPresignedImageDownload,
+  createPresignedImageUpload,
+} from '../services/imageService.js'
 import {
   finalizeListingImage,
   updateRentalListingDetails,
 } from '../services/listingService.js'
 import type {
   ImageUploadInput,
+  ListingDetails,
   ListingInput,
+  ListingDetailsResponse,
   ListingUpdateInput,
 } from '../types/listing.js'
 import { RequestError } from '../utils/requestError.js'
@@ -26,6 +32,23 @@ const listingIdFromRequest = (request: Parameters<RequestHandler>[0]) => {
   }
   return listingId.toString()
 }
+
+const listingImageResponse = async (image: {
+  id: string
+  imagePath: string
+  displayOrder: number
+}) => ({
+  id: image.id,
+  displayOrder: image.displayOrder,
+  imageUrl: await createPresignedImageDownload(image.imagePath),
+})
+
+const listingResponse = async (
+  listing: ListingDetails
+): Promise<ListingDetailsResponse> => ({
+  ...listing,
+  images: await Promise.all(listing.images.map(listingImageResponse)),
+})
 
 export const createRentalListing: RequestHandler = async (
   request,
@@ -44,7 +67,24 @@ export const getRentalListing: RequestHandler = async (request, response) => {
     request.auth?.userId as string,
     getListingDetails
   )
-  response.json(listing)
+  response.json(await listingResponse(listing))
+}
+
+export const getRentalListingFeed: RequestHandler = async (
+  request,
+  response
+) => {
+  const listings = await findListingFeed(
+    request.auth?.userId,
+    request.auth?.userId ? 10 : 2
+  )
+  const result = await Promise.all(
+    listings.map(async (listing) => ({
+      ...listing,
+      images: await Promise.all(listing.images.map(listingImageResponse)),
+    }))
+  )
+  response.json(result)
 }
 
 export const updateRentalListing: RequestHandler = async (
@@ -56,7 +96,7 @@ export const updateRentalListing: RequestHandler = async (
     request.auth?.userId as string,
     request.body as ListingUpdateInput
   )
-  response.json(listing)
+  response.json(await listingResponse(listing))
 }
 
 export const presignListingImage: RequestHandler = async (
@@ -91,7 +131,7 @@ export const uploadListingImage: RequestHandler = async (request, response) => {
     request.auth?.userId as string,
     request.body as ImageUploadInput
   )
-  response.status(201).json(image)
+  response.status(201).json(await listingImageResponse(image))
 }
 
 export const publishRentalListing: RequestHandler = async (

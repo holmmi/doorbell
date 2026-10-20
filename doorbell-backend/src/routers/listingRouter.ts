@@ -2,13 +2,17 @@ import { Router } from 'express'
 
 import {
   createRentalListing,
+  getRentalListingFeed,
   getRentalListing,
   presignListingImage,
   publishRentalListing,
   uploadListingImage,
   updateRentalListing,
 } from '../controllers/listingController.js'
-import { authenticate } from '../middlewares/authenticate.js'
+import {
+  authenticate,
+  optionalAuthenticate,
+} from '../middlewares/authenticate.js'
 import { requireRole } from '../middlewares/requireRole.js'
 import { validateRequestBody } from '../middlewares/validateRequest.js'
 import {
@@ -21,6 +25,7 @@ import {
 const listingRouter = Router()
 const landlordOnly = [authenticate, requireRole('LANDLORD')]
 
+listingRouter.get('/', optionalAuthenticate, getRentalListingFeed)
 listingRouter.post(
   '/',
   landlordOnly,

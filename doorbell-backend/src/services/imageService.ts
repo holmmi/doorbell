@@ -1,5 +1,6 @@
 import {
   DeleteObjectCommand,
+  GetObjectCommand,
   HeadObjectCommand,
   PutObjectCommand,
   S3ServiceException,
@@ -11,6 +12,7 @@ import type { PresignedImage } from '../types/listing.js'
 import { RequestError } from '../utils/requestError.js'
 
 const uploadUrlLifetimeSeconds = 900
+export const downloadUrlLifetimeSeconds = 900
 const allowedContentTypes = new Set(['image/png', 'image/jpg', 'image/jpeg'])
 
 export type ImageType = 'listings' | 'users'
@@ -42,6 +44,17 @@ export const createPresignedImageUpload = async (
   })
 
   return { objectKey, uploadUrl, expiresIn: uploadUrlLifetimeSeconds }
+}
+
+export const createPresignedImageDownload = async (
+  objectKey: string
+): Promise<string> => {
+  const { bucket, client } = getObjectStorage()
+  return getSignedUrl(
+    client,
+    new GetObjectCommand({ Bucket: bucket, Key: objectKey }),
+    { expiresIn: downloadUrlLifetimeSeconds }
+  )
 }
 
 export const verifyImageObject = async (

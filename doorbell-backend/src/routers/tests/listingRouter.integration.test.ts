@@ -26,6 +26,7 @@ import type { Pool } from 'pg'
 
 import type {
   ListingDetails,
+  ListingDetailsResponse,
   ListingImage,
   ListingImageInput,
   PresignedImage,
@@ -155,6 +156,40 @@ const request = (method: string, path: string, body?: unknown) =>
     signal: AbortSignal.timeout(15_000),
   })
 
+const publicRequest = (method: string, path: string) =>
+  fetch(`${baseUrl}${path}`, {
+    method,
+    signal: AbortSignal.timeout(15_000),
+  })
+
+const requestAs = (authToken: string, method: string, path: string) =>
+  fetch(`${baseUrl}${path}`, {
+    method,
+    headers: {
+      Authorization: `Bearer ${authToken}`,
+      'Content-Type': 'application/json',
+    },
+    signal: AbortSignal.timeout(15_000),
+  })
+
+const seedPublishedListing = async (ownerId: number, imagePath: string) => {
+  const listing = await pool.query<{ id: string }>(
+    `INSERT INTO rental_listing (
+       owner_id, monthly_price, square_meters, neighborhood, city,
+       available_from, extra_costs, rooms, published
+     ) VALUES ($1, 1000, 40, 'Kallio', 'Helsinki', '2026-11-01', '', 'STUDIO', TRUE)
+     RETURNING id`,
+    [ownerId]
+  )
+  await pool.query(
+    `INSERT INTO rental_listing_image
+       (rental_listing_id, image_path, display_order)
+     VALUES ($1, $2, 1)`,
+    [listing.rows[0].id, imagePath]
+  )
+  return listing.rows[0].id
+}
+
 const createListing = async () => {
   const response = await request('POST', '', listingInput)
   assert.equal(response.status, 201)
@@ -164,7 +199,7 @@ const createListing = async () => {
 const readListing = async () => {
   const response = await request('GET', '/1')
   assert.equal(response.status, 200)
-  return (await response.json()) as ListingDetails
+  return (await response.json()) as ListingDetailsResponse
 }
 
 const update = (images: ListingImageInput[], neighborhood = 'Kallio') =>
@@ -221,11 +256,74 @@ const waitForBlockedConnection = async (
 }
 
 void describe(
-  'listing images',
+  'listing router tests',
   // Include time for cold image pulls and container startup in the suite budget.
   { concurrency: false, timeout: 360_000 },
   () => {
     void describe('listings', () => {
+      void test('listing feed returns 2 listings with image URLs', async () => {
+        await pool.query(`
+          INSERT INTO "user" (first_name, last_name, email, password, role)
+          VALUES ('Owner', 'Two', 'owner2@example.com', 'unused', 'LANDLORD')
+        `)
+        const firstId = await seedPublishedListing(
+          1,
+          'listings/1/public-first.png'
+        )
+        await seedPublishedListing(2, 'listings/2/public-second.png')
+        await seedPublishedListing(2, 'listings/2/public-third.png')
+
+        const response = await publicRequest('GET', '')
+        assert.equal(response.status, 200)
+        const listings = (await response.json()) as Array<{
+          id: string
+          images: Array<{ imageUrl: string }>
+        }>
+        assert.equal(listings.length, 2)
+        assert.deepEqual(
+          listings.map((listing) => listing.id),
+          [firstId, '2']
+        )
+        assert.match(listings[0].images[0].imageUrl, /^http/)
+      })
+
+      void test('authenticated feed excludes owned and reviewed listings and returns 10 results', async () => {
+        await pool.query(`
+          INSERT INTO "user" (first_name, last_name, email, password, role)
+          VALUES
+            ('Tenant', 'Two', 'tenant@example.com', 'unused', 'TENANT'),
+            ('Owner', 'Two', 'owner2@example.com', 'unused', 'LANDLORD')
+        `)
+        const ownedId = await seedPublishedListing(2, 'listings/2/owned.png')
+        const reviewedId = await seedPublishedListing(
+          1,
+          'listings/1/reviewed.png'
+        )
+        for (let index = 0; index < 10; index += 1) {
+          await seedPublishedListing(1, `listings/1/feed-${index}.png`)
+        }
+        await pool.query(
+          `INSERT INTO rental_listing_preference
+             (tenant_user_id, rental_listing_id, liked)
+           VALUES (2, $1, TRUE)`,
+          [reviewedId]
+        )
+
+        const { createAccessToken } = await import('../../utils/jwt.js')
+        const response = await requestAs(createAccessToken('2'), 'GET', '')
+        assert.equal(response.status, 200)
+        const listings = (await response.json()) as Array<{ id: string }>
+        assert.equal(listings.length, 10)
+        assert.equal(
+          listings.some((listing) => listing.id === ownedId),
+          false
+        )
+        assert.equal(
+          listings.some((listing) => listing.id === reviewedId),
+          false
+        )
+      })
+
       void test('creating a listing succeeds', async () => {
         const response = await request('POST', '', listingInput)
         assert.equal(response.status, 201)
@@ -246,20 +344,28 @@ void describe(
 
         const response = await request('GET', '/1')
         assert.equal(response.status, 200)
-        const listing = (await response.json()) as ListingDetails
+        const listing = (await response.json()) as ListingDetailsResponse
         assert.equal(listing.neighborhood, listingInput.neighborhood)
         assert.equal(listing.city, listingInput.city)
         assert.equal(listing.monthlyPrice, '1250.00')
         assert.equal(listing.squareMeters, '42.50')
         assert.equal(listing.rooms, listingInput.rooms)
+        assert.equal(listing.createdAt, '2026-10-19')
+        assert.equal(listing.availableFrom, listingInput.availableFrom)
         assert.equal(listing.ready, true)
-        assert.deepEqual(listing.images, [first, second])
+        assert.deepEqual(
+          listing.images.map(({ id, displayOrder }) => ({ id, displayOrder })),
+          [
+            { id: first.id, displayOrder: first.displayOrder },
+            { id: second.id, displayOrder: second.displayOrder },
+          ]
+        )
+        assert.match(listing.images[0].imageUrl, /^http/)
       })
 
       void test('updating listing details succeeds and preserves its images', async () => {
         await createListing()
         const image = await addImage(1)
-        const original = await readListing()
 
         const response = await request('PUT', '/1', {
           ...listingInput,
@@ -268,15 +374,20 @@ void describe(
           extraCosts: 'Water 25 EUR/month',
         })
         assert.equal(response.status, 200)
-        const listing = (await response.json()) as ListingDetails
-        assert.deepEqual(listing, {
-          ...original,
-          neighborhood: 'Kamppi',
-          monthlyPrice: '1400.00',
-          extraCosts: 'Water 25 EUR/month',
-          images: [image],
-        })
-        assert.deepEqual(await readListing(), listing)
+        const listing = (await response.json()) as ListingDetailsResponse
+        assert.equal(listing.neighborhood, 'Kamppi')
+        assert.equal(listing.monthlyPrice, '1400.00')
+        assert.equal(listing.extraCosts, 'Water 25 EUR/month')
+        assert.deepEqual(
+          listing.images.map(({ id, displayOrder }) => ({ id, displayOrder })),
+          [{ id: image.id, displayOrder: image.displayOrder }]
+        )
+        assert.match(listing.images[0].imageUrl, /^http/)
+        const current = await readListing()
+        assert.deepEqual(
+          current.images.map(({ id, displayOrder }) => ({ id, displayOrder })),
+          [{ id: image.id, displayOrder: image.displayOrder }]
+        )
       })
     })
 
@@ -292,16 +403,23 @@ void describe(
           displayOrder: 1,
         })
         assert.equal(response.status, 201)
-        const finalized = (await response.json()) as ListingImage
+        const finalized =
+          (await response.json()) as ListingDetailsResponse['images'][number]
+        assert.equal(finalized.id, '1')
+        assert.equal(finalized.displayOrder, 1)
+        assert.match(finalized.imageUrl, /^http/)
         assert.deepEqual(finalized, {
           id: '1',
-          imagePath: image.objectKey,
           displayOrder: 1,
+          imageUrl: finalized.imageUrl,
         })
         const listing = await readListing()
         assert.equal(listing.ready, true)
         assert.equal(listing.published, false)
-        assert.deepEqual(listing.images, [finalized])
+        assert.deepEqual(
+          listing.images.map(({ id, displayOrder }) => ({ id, displayOrder })),
+          [{ id: finalized.id, displayOrder: finalized.displayOrder }]
+        )
         assert.equal(
           (await pool.query('SELECT * FROM rental_listing_image_upload'))
             .rowCount,
@@ -394,12 +512,16 @@ void describe(
           },
         ])
         assert.equal(response.status, 200)
-        const listing = (await response.json()) as ListingDetails
-        assert.deepEqual(listing.images, [
-          { ...original, imagePath: replacement.objectKey },
-        ])
+        const listing = (await response.json()) as ListingDetailsResponse
+        assert.equal(listing.images[0].id, original.id)
+        assert.equal(listing.images[0].displayOrder, original.displayOrder)
+        assert.match(listing.images[0].imageUrl, /^http/)
         assert.equal(listing.published, true)
-        assert.deepEqual(await readListing(), listing)
+        const current = await readListing()
+        assert.deepEqual(
+          current.images.map(({ id, displayOrder }) => ({ id, displayOrder })),
+          [{ id: original.id, displayOrder: original.displayOrder }]
+        )
       })
 
       void test('removing the last listing image succeeds and unpublishes the listing', async () => {
@@ -424,12 +546,22 @@ void describe(
           { id: second.id, displayOrder: 1 },
         ])
         assert.equal(response.status, 200)
-        const listing = (await response.json()) as ListingDetails
-        assert.deepEqual(listing.images, [
-          { ...second, displayOrder: 1 },
-          { ...first, displayOrder: 2 },
-        ])
-        assert.deepEqual(await readListing(), listing)
+        const listing = (await response.json()) as ListingDetailsResponse
+        assert.deepEqual(
+          listing.images.map(({ id, displayOrder }) => ({ id, displayOrder })),
+          [
+            { id: second.id, displayOrder: 1 },
+            { id: first.id, displayOrder: 2 },
+          ]
+        )
+        const current = await readListing()
+        assert.deepEqual(
+          current.images.map(({ id, displayOrder }) => ({ id, displayOrder })),
+          [
+            { id: second.id, displayOrder: 1 },
+            { id: first.id, displayOrder: 2 },
+          ]
+        )
       })
 
       void test('updating images rejects unknown IDs without changing the listing', async () => {
@@ -558,7 +690,11 @@ void describe(
             (await pool.query('SELECT * FROM listing_image_cleanup')).rowCount,
             0
           )
-          await head(first.imagePath)
+          const image = await pool.query<{ image_path: string }>(
+            'SELECT image_path FROM rental_listing_image WHERE id = $1',
+            [first.id]
+          )
+          await head(image.rows[0].image_path)
         } finally {
           await pool.query(
             'DROP TRIGGER conflict_listing_image_order ON rental_listing; DROP FUNCTION conflict_listing_image_order()'
@@ -620,7 +756,13 @@ void describe(
           })
           const listing = await readListing()
           assert.equal(listing.neighborhood, 'First concurrent update')
-          assert.deepEqual(listing.images, [{ ...second, displayOrder: 1 }])
+          assert.deepEqual(
+            listing.images.map(({ id, displayOrder }) => ({
+              id,
+              displayOrder,
+            })),
+            [{ id: second.id, displayOrder: 1 }]
+          )
         } finally {
           await barrier.query('ROLLBACK')
           barrier.release()
@@ -637,7 +779,16 @@ void describe(
 
       void test('retired image objects are deleted only after the cleanup grace period', async () => {
         const first = await addImage(1)
-        const second = await addImage(2)
+        await addImage(2)
+        const imagePaths = await pool.query<{
+          id: string
+          image_path: string
+        }>(
+          `SELECT id, image_path
+           FROM rental_listing_image
+           WHERE rental_listing_id = 1
+           ORDER BY id`
+        )
         const replacement = await presign()
         await upload(replacement)
         assert.equal(
@@ -657,7 +808,7 @@ void describe(
         )
         assert.deepEqual(
           new Set(queued.rows.map((row) => row.object_key)),
-          new Set([first.imagePath, second.imagePath])
+          new Set(imagePaths.rows.map((row) => row.image_path))
         )
 
         const { cleanUpListingImages } =
@@ -665,14 +816,15 @@ void describe(
         const { deleteImageObject } =
           await import('../../services/imageService.js')
         await cleanUpListingImages(deleteImageObject)
-        await head(first.imagePath)
-        await head(second.imagePath)
+        for (const { image_path: imagePath } of imagePaths.rows) {
+          await head(imagePath)
+        }
         // Advance eligibility in the isolated database instead of waiting 15 minutes.
         await pool.query(
           "UPDATE listing_image_cleanup SET available_after = CURRENT_TIMESTAMP - INTERVAL '1 second'"
         )
         await cleanUpListingImages(deleteImageObject)
-        for (const key of [first.imagePath, second.imagePath]) {
+        for (const { image_path: key } of imagePaths.rows) {
           await assert.rejects(
             head(key),
             (error: unknown) =>

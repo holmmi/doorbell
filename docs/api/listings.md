@@ -1,6 +1,6 @@
 # Rental listings
 
-All routes are under `/api/listing` and require
+Management routes are under `/api/listing` and require
 `Authorization: Bearer <access-token>` from a current `LANDLORD` account.
 Missing/invalid authentication returns 401; accounts without the landlord role
 return 403. Missing listings, invalid listing IDs and another landlord's
@@ -10,6 +10,49 @@ decimal strings to preserve PostgreSQL `BIGINT` precision.
 Listing path IDs are parsed as numbers and must be positive safe integers
 (at most 9,007,199,254,740,991). They are normalized to decimal strings before
 database access. Values outside this range return 404.
+
+## Listing feed
+
+`GET /api/listing` returns published listings for the swipe experience. Without
+an `Authorization` header, it returns at most 2 listings. With a valid bearer
+token, it returns at most 10 listings, excludes the current user's own
+listings, and excludes every listing with an existing preference for that user,
+whether the preference is a like or a dislike. Listings are returned in
+ascending ID order.
+
+An invalid bearer token returns HTTP 401. Authenticated requests may use any
+valid user role; this endpoint is not restricted to landlords.
+
+Each listing includes its finalized images. `imageUrl` is a pre-signed S3 GET
+URL that can be used directly as an HTML image `src`, together with the image
+ID and display order. These URLs expire after 900 seconds and must be
+requested again when they expire. Internal S3 object keys are not included in
+listing responses.
+
+```json
+[
+  {
+    "id": "42",
+    "ownerId": "7",
+    "createdAt": "2026-10-15",
+    "monthlyPrice": "1250.00",
+    "squareMeters": "42.50",
+    "neighborhood": "Kallio",
+    "city": "Helsinki",
+    "availableFrom": "2026-11-01",
+    "extraCosts": "Water 25 EUR/month",
+    "rooms": "ONE_ROOM_AND_KITCHEN",
+    "published": true,
+    "images": [
+      {
+        "id": "100",
+        "displayOrder": 1,
+        "imageUrl": "<pre-signed S3 GET URL>"
+      }
+    ]
+  }
+]
+```
 
 ## Database migration
 
@@ -55,12 +98,12 @@ Both GET and successful PUT return HTTP 200 with this shape:
 {
   "id": "42",
   "ownerId": "7",
-  "createdAt": "2026-10-15T00:00:00.000Z",
+  "createdAt": "2026-10-15",
   "monthlyPrice": "1250.00",
   "squareMeters": "42.50",
   "neighborhood": "Kallio",
   "city": "Helsinki",
-  "availableFrom": "2026-11-01T00:00:00.000Z",
+  "availableFrom": "2026-11-01",
   "extraCosts": "Water 25 EUR/month",
   "rooms": "ONE_ROOM_AND_KITCHEN",
   "published": true,
@@ -68,17 +111,17 @@ Both GET and successful PUT return HTTP 200 with this shape:
   "images": [
     {
       "id": "100",
-      "imagePath": "listings/42/0325629b-0cf9-4f9c-9488-bdf8f1f479dd.png",
-      "displayOrder": 1
+      "displayOrder": 1,
+      "imageUrl": "<pre-signed S3 GET URL>"
     }
   ]
 }
 ```
 
-Numeric database columns are returned as strings and dates use the existing
-node-postgres/Express date serialization. `imagePath` is an object key, not a
-public URL. Unknown/protected input fields such as `ownerId`, `published`,
-`ready` and `createdAt` are stripped by the request schema.
+Numeric database columns are returned as strings. PostgreSQL `DATE` fields such
+as `createdAt` and `availableFrom` are returned as `YYYY-MM-DD` strings.
+Unknown/protected input fields such as `ownerId`, `published`, `ready` and
+`createdAt` are stripped by the request schema.
 
 ## Upload a new or replacement photo
 
@@ -121,7 +164,7 @@ For an individual addition, `POST /api/listing/42/images` remains supported:
 }
 ```
 
-It returns HTTP 201 with `{id, imagePath, displayOrder}`. The position must be
+It returns HTTP 201 with `{id, displayOrder, imageUrl}`. The position must be
 a positive integer from 1 to 2,147,483,647 and unused. If adding a photo should
 also move existing photos, use the atomic PUT instead. A failed finalization
 leaves the staged upload available for retry until 24 hours after pre-signing.
@@ -168,7 +211,7 @@ adds a third image and removes every other current image:
 ```
 
 Request a separate pre-signed URL for each new/replacement photo. Do not send
-an existing `imagePath` as `objectKey` to retain it; use its `id` instead.
+an existing object key as `objectKey` to retain it; use its `id` instead.
 For a reorder alone, send every existing image ID with its new position and
 the complete basic details. IDs, keys and orders must each be unique within
 the request. Orders must be integers from 1 to 2,147,483,647; gaps are allowed.
