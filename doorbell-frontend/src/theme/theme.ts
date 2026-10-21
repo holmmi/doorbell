@@ -4,11 +4,19 @@ declare module '@mui/material/styles' {
   interface Palette {
     authPanelShadow: string
     selectedRoleBackground: string
+    homeSurface: string
+    homeSurfaceBorder: string
+    photoPlaceholder: string
+    emptyDeckBorder: string
   }
 
   interface PaletteOptions {
     authPanelShadow?: string
     selectedRoleBackground?: string
+    homeSurface?: string
+    homeSurfaceBorder?: string
+    photoPlaceholder?: string
+    emptyDeckBorder?: string
   }
 }
 
@@ -44,6 +52,10 @@ const palette = {
   },
   authPanelShadow: 'rgba(26, 26, 46, 0.06)',
   selectedRoleBackground: 'rgba(110, 68, 255, 0.08)',
+  homeSurface: '#FBFAFF',
+  homeSurfaceBorder: '#EEEDF5',
+  photoPlaceholder: '#EAEAFF',
+  emptyDeckBorder: '#D9CFFF',
 }
 
 export const theme = createTheme({
