@@ -71,6 +71,10 @@ export interface ListingFeedItem extends Listing {
   images: ListingImage[]
 }
 
+export interface ListingFeedResponse extends Listing {
+  images: ListingImageResponse[]
+}
+
 export interface ListingImageInput {
   id?: string
   objectKey?: string
