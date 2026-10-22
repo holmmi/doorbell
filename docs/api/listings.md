@@ -1,5 +1,8 @@
 # Rental listings
 
+For tenant preferences, landlord applicant decisions and tenant matches, see
+[Preferences, applicants and matches](interactions.md).
+
 Management routes are under `/api/listing` and require
 `Authorization: Bearer <access-token>` from a current `LANDLORD` account.
 Missing/invalid authentication returns 401; accounts without the landlord role
@@ -7,7 +10,7 @@ return 403. Missing listings, invalid listing IDs and another landlord's
 listings all return 404 with `{"error":"error.listing.notFound"}`. IDs are
 decimal strings to preserve PostgreSQL `BIGINT` precision.
 
-Listing path IDs are parsed as numbers and must be positive safe integers
+Listing management path IDs are parsed as numbers and must be positive safe integers
 (at most 9,007,199,254,740,991). They are normalized to decimal strings before
 database access. Values outside this range return 404.
 

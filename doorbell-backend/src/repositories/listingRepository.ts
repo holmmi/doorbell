@@ -57,9 +57,9 @@ export const createListing = async (
 
 // All listing mutations share this lock, including create-flow finalization and
 // publication, so an update always works with the latest committed image set.
-export const withOwnedListing = async <T>(
+export const withListingLock = async <T>(
   listingId: string,
-  ownerId: string,
+  ownerId: string | undefined,
   operation: (client: PoolClient, listing: Listing) => Promise<T>
 ): Promise<T> => {
   const client = await pool.connect()
@@ -67,8 +67,8 @@ export const withOwnedListing = async <T>(
     await client.query('BEGIN')
     const result = await client.query<Listing>(
       `SELECT ${listingColumns} FROM rental_listing
-       WHERE id = $1 AND owner_id = $2 FOR UPDATE`,
-      [listingId, ownerId]
+       WHERE id = $1 AND ($2::BIGINT IS NULL OR owner_id = $2) FOR UPDATE`,
+      [listingId, ownerId ?? null]
     )
     const listing = result.rows[0]
     if (!listing) {
@@ -79,6 +79,21 @@ export const withOwnedListing = async <T>(
     return value
   } catch (error) {
     await client.query('ROLLBACK')
+    throw error
+  } finally {
+    client.release()
+  }
+}
+
+// Preserve image-specific conflict translation for existing management routes.
+export const withOwnedListing = async <T>(
+  listingId: string,
+  ownerId: string,
+  operation: (client: PoolClient, listing: Listing) => Promise<T>
+): Promise<T> => {
+  try {
+    return await withListingLock(listingId, ownerId, operation)
+  } catch (error) {
     // PostgreSQL SQLSTATE 23505 means unique_violation, for example when two
     // images share a display order in one listing. Deferred checks can raise it
     // at COMMIT; after rollback, report the conflict as HTTP 409.
@@ -86,8 +101,6 @@ export const withOwnedListing = async <T>(
       throw new RequestError(409, 'error.listing.image.conflict')
     }
     throw error
-  } finally {
-    client.release()
   }
 }
 

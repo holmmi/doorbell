@@ -8,10 +8,11 @@ import {
   registerListingImageUpload,
   withOwnedListing,
 } from '../repositories/listingRepository.js'
+import { createPresignedImageUpload } from '../services/imageService.js'
 import {
-  createPresignedImageDownload,
-  createPresignedImageUpload,
-} from '../services/imageService.js'
+  listingFeedResponse,
+  listingImageResponse,
+} from '../services/listingResponse.js'
 import {
   finalizeListingImage,
   updateRentalListingDetails,
@@ -33,21 +34,11 @@ const listingIdFromRequest = (request: Parameters<RequestHandler>[0]) => {
   return listingId.toString()
 }
 
-const listingImageResponse = async (image: {
-  id: string
-  imagePath: string
-  displayOrder: number
-}) => ({
-  id: image.id,
-  displayOrder: image.displayOrder,
-  imageUrl: await createPresignedImageDownload(image.imagePath),
-})
-
 const listingResponse = async (
   listing: ListingDetails
 ): Promise<ListingDetailsResponse> => ({
-  ...listing,
-  images: await Promise.all(listing.images.map(listingImageResponse)),
+  ...(await listingFeedResponse(listing)),
+  ready: listing.ready,
 })
 
 export const createRentalListing: RequestHandler = async (
@@ -78,12 +69,7 @@ export const getRentalListingFeed: RequestHandler = async (
     request.auth?.userId,
     request.auth?.userId ? 10 : 2
   )
-  const result = await Promise.all(
-    listings.map(async (listing) => ({
-      ...listing,
-      images: await Promise.all(listing.images.map(listingImageResponse)),
-    }))
-  )
+  const result = await Promise.all(listings.map(listingFeedResponse))
   response.json(result)
 }
 
