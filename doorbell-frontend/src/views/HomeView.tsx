@@ -1,8 +1,11 @@
-import { Box, Typography } from '@mui/material'
+import { Box, Button, Typography } from '@mui/material'
+import { Link as RouterLink } from 'react-router'
 import { useTranslation } from 'react-i18next'
+import { useAuth } from '../hooks/useAuth'
 
 export function HomeView() {
   const { t } = useTranslation()
+  const { status } = useAuth()
 
   return (
     <Box
@@ -43,6 +46,16 @@ export function HomeView() {
         >
           {t('home.subtitle')}
         </Typography>
+
+        <Button
+          component={RouterLink}
+          to={status === 'authenticated' ? '/landlord/listings/new' : '/login'}
+          variant="contained"
+          size="large"
+          sx={{ mt: 4 }}
+        >
+          {t('listing.createCta')}
+        </Button>
       </Box>
     </Box>
   )

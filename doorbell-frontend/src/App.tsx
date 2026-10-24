@@ -4,6 +4,8 @@ import { lazy, Suspense } from 'react'
 import { BrowserRouter, Route, Routes } from 'react-router'
 import { AppShell } from './components/AppShell'
 import { AuthLayout } from './components/AuthLayout'
+import { PageLoader } from './components/PageLoader'
+import { AuthProvider } from './auth/AuthProvider'
 import './i18n'
 import { theme } from './theme/theme'
 import { HomeView } from './views/HomeView'
@@ -18,38 +20,53 @@ const RegistrationView = lazy(() =>
     default: RegistrationView,
   }))
 )
+const CreateListingView = lazy(() =>
+  import('./views/CreateListingView').then(({ CreateListingView }) => ({
+    default: CreateListingView,
+  }))
+)
 
 function App() {
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
-      <BrowserRouter>
-        <Routes>
-          <Route element={<AuthLayout />}>
-            <Route
-              path="/login"
-              element={
-                <Suspense fallback={null}>
-                  <LoginView />
-                </Suspense>
-              }
-            />
-            <Route
-              path="/registration"
-              element={
-                <Suspense fallback={null}>
-                  <RegistrationView />
-                </Suspense>
-              }
-            />
-          </Route>
-          <Route element={<AppShell />}>
-            <Route path="/" element={<HomeView />} />
-            <Route path="/matches" element={<MatchesView />} />
-            <Route path="/profile" element={<ProfileView />} />
-          </Route>
-        </Routes>
-      </BrowserRouter>
+      <AuthProvider>
+        <BrowserRouter>
+          <Routes>
+            <Route element={<AuthLayout />}>
+              <Route
+                path="/login"
+                element={
+                  <Suspense fallback={<PageLoader />}>
+                    <LoginView />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="/registration"
+                element={
+                  <Suspense fallback={<PageLoader />}>
+                    <RegistrationView />
+                  </Suspense>
+                }
+              />
+            </Route>
+            <Route element={<AppShell />}>
+              <Route path="/" element={<HomeView />} />
+              <Route path="/matches" element={<MatchesView />} />
+              <Route path="/profile" element={<ProfileView />} />
+              <Route
+                path="/landlord/listings/new"
+                element={
+                  <Suspense fallback={<PageLoader />}>
+                    <CreateListingView />
+                  </Suspense>
+                }
+              />
+            </Route>
+          </Routes>
+        </BrowserRouter>
+      </AuthProvider>
     </ThemeProvider>
   )
 }

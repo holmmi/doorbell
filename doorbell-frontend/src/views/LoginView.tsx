@@ -5,14 +5,15 @@ import { useForm } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router'
 import { ApiError } from '../api/client'
-import { userClient } from '../api/userClient'
 import { AuthPanel } from '../components/auth/AuthPanel'
-import { AuthTextField } from '../components/auth/AuthTextField'
+import { ControlledTextField } from '../components/form/ControlledTextField'
+import { useAuth } from '../hooks/useAuth'
 import { loginSchema, type LoginFormValues } from '../schemas/auth'
 
 export function LoginView() {
   const { t } = useTranslation()
   const navigate = useNavigate()
+  const { login } = useAuth()
   const [apiError, setApiError] = useState<string | null>(null)
   const {
     control,
@@ -26,7 +27,7 @@ export function LoginView() {
   const onSubmit = handleSubmit(async (values) => {
     setApiError(null)
     try {
-      await userClient.login(values)
+      await login(values)
       void navigate('/')
     } catch (error) {
       setApiError(error instanceof ApiError ? error.code : 'error.network')
@@ -54,14 +55,14 @@ export function LoginView() {
           }}
         >
           <Stack spacing={2.5}>
-            <AuthTextField
+            <ControlledTextField
               control={control}
               name="email"
               label={t('auth.email')}
               type="email"
               autoComplete="email"
             />
-            <AuthTextField
+            <ControlledTextField
               control={control}
               name="password"
               label={t('auth.password')}

@@ -1,7 +1,8 @@
-import { SvgIcon, Typography } from '@mui/material'
+import { Typography } from '@mui/material'
 import { useTheme } from '@mui/material/styles'
 import { useTranslation } from 'react-i18next'
 import { NavLink } from 'react-router'
+import { LogInIcon } from './icons'
 
 export function LoginNavLink() {
   const { t } = useTranslation()
@@ -23,22 +24,7 @@ export function LoginNavLink() {
         transition: 'color 0.2s ease',
       })}
     >
-      <SvgIcon
-        viewBox="0 0 24 24"
-        aria-hidden="true"
-        sx={{
-          fontSize: { xs: 20, md: 24 },
-          fill: 'none',
-          stroke: 'currentColor',
-          strokeWidth: 2,
-          strokeLinecap: 'round',
-          strokeLinejoin: 'round',
-        }}
-      >
-        <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" />
-        <path d="m10 17 5-5-5-5" />
-        <path d="M15 12H3" />
-      </SvgIcon>
+      <LogInIcon sx={{ fontSize: { xs: 20, md: 24 } }} />
       <Typography
         component="span"
         sx={{

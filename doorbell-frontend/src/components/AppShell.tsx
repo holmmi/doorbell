@@ -2,7 +2,7 @@ import { AppBar, Box, Container, Toolbar, Typography } from '@mui/material'
 import { useTheme } from '@mui/material/styles'
 import { NavLink, Outlet } from 'react-router'
 import { useTranslation } from 'react-i18next'
-import { getToken } from '../api/client'
+import { useAuth } from '../hooks/useAuth'
 import { DoorbellLogo } from './DoorbellLogo'
 import { LoginNavLink } from './LoginNavLink'
 import { MatchesBadge } from './MatchesBadge'
@@ -17,7 +17,8 @@ const navItems = [
 export function AppShell() {
   const { t } = useTranslation()
   const theme = useTheme()
-  const isLoggedIn = Boolean(getToken())
+  const { user, status } = useAuth()
+  const isLoggedIn = status === 'authenticated'
 
   return (
     <Box sx={{ minHeight: '100vh', backgroundColor: 'background.default' }}>
@@ -92,7 +93,7 @@ export function AppShell() {
                 </NavLink>
               ))}
 
-            {!isLoggedIn ? <LoginNavLink /> : null}
+            {status === 'anonymous' ? <LoginNavLink /> : null}
             {isLoggedIn ? (
               <Box
                 sx={{
@@ -101,7 +102,10 @@ export function AppShell() {
                   ml: { xs: -1, md: -2 },
                 }}
               >
-                <ProfileAvatar alt={t('profile.avatarAlt')} />
+                <ProfileAvatar
+                  src={user?.picturePath}
+                  alt={t('profile.avatarAlt')}
+                />
               </Box>
             ) : null}
           </Box>
