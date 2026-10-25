@@ -40,12 +40,21 @@ API contracts and request/response examples live in `docs/api/`:
   bearer tokens and current account information under `/api/user`.
 - [Rental listings](../docs/api/listings.md): listing creation, retrieval,
   updates, image uploads, publication and cleanup under `/api/listing`.
+- [Preferences, applicants and matches](../docs/api/interactions.md): tenant
+  preferences, landlord decisions and accepted matches under `/api/listing-interaction`.
 
 Update the relevant guide whenever an endpoint's request fields, responses,
 validation rules, authentication requirements or error behavior changes.
 Keep API contracts out of `README.md`; its Documentation section should only
 link to these guides. Keep README testing guidance general: commands and
 prerequisites, without individual test scenarios or implementation details.
+
+Keep frontend translations in sync with all backend translation keys. When
+adding or changing an API error key or a custom validation issue key, update
+`doorbell-frontend/src/i18n.ts` for every supported language in the same change,
+even if the corresponding frontend screen is not implemented yet. Review keys
+across controllers, middleware, services, repositories and schemas, including
+all possible values of dynamically constructed keys.
 
 ## GitHub workflow
 
@@ -104,19 +113,21 @@ route with isolated test environment variables and a stubbed PostgreSQL
 `pool.query`. It loads database configuration but never connects to PostgreSQL,
 so that test file requires no running database.
 
-`src/routers/tests/listingRouter.integration.test.ts` runs with the other backend
-tests through `npm test --workspace=doorbell-backend`. It requires a running
-Docker-compatible runtime with Linux containers and fails if none is available.
+`src/routers/tests/listingRouter.integration.test.ts` and
+`src/routers/tests/interaction.integration.test.ts` run with the other backend
+tests through `npm test --workspace=doorbell-backend`. They require a running
+Docker-compatible runtime with Linux containers and fail if none is available.
 Pinned `@testcontainers/postgresql` and `@testcontainers/s3mock` packages start
 disposable PostgreSQL 18.6 and Adobe S3Mock 5.2.3 containers on random ports.
-The suite applies the migration SQL files directly, configures the backend
-before importing it, and cleans up containers even after setup/test failures.
-It groups API success and error cases by operation: listing creation, retrieval,
-updates, image uploads and publication, with separate background cleanup coverage.
+Their shared `src/routers/tests/helpers/integration.ts` fixture applies the
+migration SQL files directly, configures the backend before importing it, and
+cleans up containers even after setup/test failures. The suites cover listing
+creation, retrieval, updates, image uploads, publication, background cleanup,
+preferences, applicants and matches.
 Test-only triggers exercise deferred constraint rollback and, with
 `pg_blocking_pids`, coordinate concurrent HTTP updates without fixed sleeps.
-The integration suite sets `concurrency: false` so tests sharing its containers
-run sequentially; other test files run independently. Keep the container
+Each integration suite sets `concurrency: false` so tests sharing its containers
+run sequentially; each file has its own containers. Keep the container
 image versions aligned with `docker-compose.yml`. No development services or
 `.env` are used. S3Mock does not validate presigned URL signatures or expiration.
 

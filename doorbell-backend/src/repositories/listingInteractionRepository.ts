@@ -1,10 +1,10 @@
 import type { PoolClient } from 'pg'
 
 import { pool } from '../config/database.js'
+import type { Listing } from '../types/listing.js'
 import type {
   Applicant,
   ApplicantDecision,
-  Match,
 } from '../types/listingInteraction.js'
 
 export const findPreference = async (
@@ -78,7 +78,7 @@ export const findPendingApplicants = async (
 ): Promise<Applicant[]> => {
   const result = await client.query<Applicant>(
     `SELECT tenant.id AS "tenantId", tenant.first_name AS "firstName",
-            tenant.last_name AS "lastName", tenant.picture_path AS "picturePath"
+            tenant.last_name AS "lastName"
      FROM rental_listing_preference preference
      JOIN "user" tenant ON tenant.id = preference.tenant_user_id
      WHERE preference.rental_listing_id = $1 AND preference.liked
@@ -93,32 +93,33 @@ export const findPendingApplicants = async (
   return result.rows
 }
 
-// One statement gives listing details, images and contacts a consistent snapshot.
-// Cast numeric fields inside JSON explicitly to preserve the listing API contract.
-export const findTenantMatches = async (tenantId: string): Promise<Match[]> => {
-  const result = await pool.query<Match>(
-    `SELECT matched.rental_listing_id AS "listingId", matched.created_at AS "createdAt",
-       json_build_object(
-         'id', listing.id::text, 'ownerId', listing.owner_id::text,
-         'createdAt', listing.created_at::text,
-         'monthlyPrice', listing.monthly_price::text,
-         'squareMeters', listing.square_meters::text,
-         'neighborhood', listing.neighborhood, 'city', listing.city,
-         'availableFrom', listing.available_from::text,
-         'extraCosts', listing.extra_costs, 'rooms', listing.rooms,
-         'published', listing.published,
-         'images', COALESCE((
-           SELECT json_agg(json_build_object(
-             'id', image.id::text, 'imagePath', image.image_path,
-             'displayOrder', image.display_order
-           ) ORDER BY image.display_order, image.id)
-           FROM rental_listing_image image WHERE image.rental_listing_id = listing.id
-         ), '[]'::json)
-       ) AS listing,
-       json_build_object(
-         'firstName', landlord.first_name, 'lastName', landlord.last_name,
-         'email', landlord.email, 'phone', landlord.phone
-       ) AS landlord
+export interface TenantMatchRow extends Omit<Listing, 'ownerId' | 'createdAt'> {
+  matchedAt: Date
+  landlordFirstName: string
+  landlordLastName: string
+  landlordEmail: string
+  landlordPhone: string | null
+  imageId: string | null
+  imagePath: string | null
+  displayOrder: number | null
+}
+
+// A flat join keeps the query readable and reads each match in one snapshot.
+export const findTenantMatches = async (
+  tenantId: string
+): Promise<TenantMatchRow[]> => {
+  const result = await pool.query<TenantMatchRow>(
+    `SELECT listing.id, matched.created_at AS "matchedAt",
+       listing.monthly_price AS "monthlyPrice",
+       listing.square_meters AS "squareMeters",
+       listing.neighborhood, listing.city,
+       listing.available_from::text AS "availableFrom",
+       listing.extra_costs AS "extraCosts", listing.rooms, listing.published,
+       landlord.first_name AS "landlordFirstName",
+       landlord.last_name AS "landlordLastName",
+       landlord.email AS "landlordEmail", landlord.phone AS "landlordPhone",
+       image.id AS "imageId", image.image_path AS "imagePath",
+       image.display_order AS "displayOrder"
      FROM "match" matched
      JOIN rental_listing listing ON listing.id = matched.rental_listing_id
      JOIN "user" landlord ON landlord.id = matched.landlord_user_id
@@ -126,8 +127,10 @@ export const findTenantMatches = async (tenantId: string): Promise<Match[]> => {
        ON decision.rental_listing_id = matched.rental_listing_id
       AND decision.tenant_user_id = matched.tenant_user_id
       AND decision.decision = 'ACCEPTED'
+     LEFT JOIN rental_listing_image image ON image.rental_listing_id = listing.id
      WHERE matched.tenant_user_id = $1
-     ORDER BY matched.created_at DESC, matched.rental_listing_id DESC`,
+     ORDER BY matched.created_at DESC, matched.rental_listing_id DESC,
+              image.display_order, image.id`,
     [tenantId]
   )
   return result.rows

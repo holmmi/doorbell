@@ -51,7 +51,36 @@ const resources = {
       },
       error: {
         listing: {
+          notFound: 'This listing could not be found.',
+          unavailable: 'This listing is no longer available.',
+          preference: {
+            conflict:
+              'You have already liked or disliked this listing. Your choice cannot be changed.',
+          },
+          decision: {
+            conflict:
+              'You have already accepted or declined this applicant. Your decision cannot be changed.',
+          },
+          applicant: {
+            notFound: 'This applicant could not be found for the listing.',
+            notInterested: 'This tenant is not interested in the listing.',
+          },
+          images: {
+            incomplete:
+              'Add at least one photo before publishing your listing.',
+          },
           image: {
+            invalidKey:
+              'This photo upload has expired or is invalid. Please upload it again.',
+            invalidObject:
+              'This photo is empty or does not match its file type. Please choose another image.',
+            notUploaded:
+              'This photo has not finished uploading. Please try again.',
+            alreadyFinalized:
+              'This photo has already been added to the listing.',
+            conflict:
+              'Some photos conflict with the saved listing. Refresh the listing and try again.',
+            notFound: 'This photo could not be found in the listing.',
             idOrKeyRequired:
               'We could not save one of your photos. Please remove it and add it again.',
             duplicate: {
@@ -66,6 +95,16 @@ const resources = {
         authentication: {
           unauthorized: 'Please sign in again.',
         },
+        authorization: {
+          forbidden: 'You do not have permission to perform this action.',
+        },
+        request: {
+          invalid:
+            'The request is invalid. Please refresh the page and try again.',
+        },
+        server: {
+          unexpected: 'Something went wrong on the server. Please try again.',
+        },
         login: {
           invalidCredentials: 'The email or password is incorrect.',
         },
@@ -74,8 +113,7 @@ const resources = {
             'An error occurred registering the account. Please try again.',
         },
         validation: {
-          server:
-            'Some account details are invalid. Check the form and try again.',
+          server: 'Some details are invalid. Check the form and try again.',
         },
       },
       pageTitles: {

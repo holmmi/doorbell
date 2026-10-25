@@ -25,14 +25,18 @@ ALTER TABLE rental_listing_preference
     ADD CONSTRAINT rental_listing_preference_like_key
         UNIQUE (tenant_user_id, rental_listing_id, liked);
 
+CREATE TYPE applicant_decision AS ENUM (
+    'ACCEPTED',
+    'DECLINED'
+);
+
 CREATE TABLE rental_listing_applicant_decision (
     tenant_user_id BIGINT NOT NULL,
     rental_listing_id BIGINT NOT NULL,
-    decision TEXT NOT NULL CHECK (decision IN ('ACCEPTED', 'DECLINED')),
+    decision applicant_decision NOT NULL,
     -- A checked discriminator lets the FK require an actual like.
     liked BOOLEAN NOT NULL DEFAULT TRUE CHECK (liked),
     PRIMARY KEY (tenant_user_id, rental_listing_id),
-    UNIQUE (tenant_user_id, rental_listing_id, decision),
     FOREIGN KEY (tenant_user_id, rental_listing_id, liked)
         REFERENCES rental_listing_preference (tenant_user_id, rental_listing_id, liked)
         ON DELETE CASCADE
@@ -49,11 +53,10 @@ ALTER TABLE rental_listing ADD CONSTRAINT rental_listing_owner_key UNIQUE (id, o
 
 ALTER TABLE "match"
     ADD COLUMN created_at TIMESTAMPTZ,
-    ADD COLUMN decision TEXT NOT NULL DEFAULT 'ACCEPTED' CHECK (decision = 'ACCEPTED'),
     ADD CONSTRAINT match_tenant_listing_key UNIQUE (tenant_user_id, rental_listing_id),
-    ADD CONSTRAINT match_accepted_decision_fk
-        FOREIGN KEY (tenant_user_id, rental_listing_id, decision)
-        REFERENCES rental_listing_applicant_decision (tenant_user_id, rental_listing_id, decision)
+    ADD CONSTRAINT match_applicant_decision_fk
+        FOREIGN KEY (tenant_user_id, rental_listing_id)
+        REFERENCES rental_listing_applicant_decision (tenant_user_id, rental_listing_id)
         ON DELETE CASCADE,
     ADD CONSTRAINT match_listing_owner_fk
         FOREIGN KEY (rental_listing_id, landlord_user_id)

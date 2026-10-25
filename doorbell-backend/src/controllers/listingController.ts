@@ -12,7 +12,7 @@ import { createPresignedImageUpload } from '../services/imageService.js'
 import {
   listingFeedResponse,
   listingImageResponse,
-} from '../services/listingResponse.js'
+} from '../mappers/listingResponse.js'
 import {
   finalizeListingImage,
   updateRentalListingDetails,
@@ -24,15 +24,7 @@ import type {
   ListingDetailsResponse,
   ListingUpdateInput,
 } from '../types/listing.js'
-import { RequestError } from '../utils/requestError.js'
-
-const listingIdFromRequest = (request: Parameters<RequestHandler>[0]) => {
-  const listingId = Number(request.params.listingId)
-  if (!Number.isSafeInteger(listingId) || listingId <= 0) {
-    throw new RequestError(404, 'error.listing.notFound')
-  }
-  return listingId.toString()
-}
+import { resourceIdFromRequest } from '../utils/resourceId.js'
 
 const listingResponse = async (
   listing: ListingDetails
@@ -54,7 +46,7 @@ export const createRentalListing: RequestHandler = async (
 
 export const getRentalListing: RequestHandler = async (request, response) => {
   const listing = await withOwnedListing(
-    listingIdFromRequest(request),
+    resourceIdFromRequest(request, 'listingId'),
     request.auth?.userId as string,
     getListingDetails
   )
@@ -78,7 +70,7 @@ export const updateRentalListing: RequestHandler = async (
   response
 ) => {
   const listing = await updateRentalListingDetails(
-    listingIdFromRequest(request),
+    resourceIdFromRequest(request, 'listingId'),
     request.auth?.userId as string,
     request.body as ListingUpdateInput
   )
@@ -91,7 +83,7 @@ export const presignListingImage: RequestHandler = async (
 ) => {
   const { contentType } = request.body as { contentType: string }
   const result = await withOwnedListing(
-    listingIdFromRequest(request),
+    resourceIdFromRequest(request, 'listingId'),
     request.auth?.userId as string,
     async (client, listing) => {
       const upload = await createPresignedImageUpload(
@@ -113,7 +105,7 @@ export const presignListingImage: RequestHandler = async (
 
 export const uploadListingImage: RequestHandler = async (request, response) => {
   const image = await finalizeListingImage(
-    listingIdFromRequest(request),
+    resourceIdFromRequest(request, 'listingId'),
     request.auth?.userId as string,
     request.body as ImageUploadInput
   )
@@ -125,7 +117,7 @@ export const publishRentalListing: RequestHandler = async (
   response
 ) => {
   const listing = await withOwnedListing(
-    listingIdFromRequest(request),
+    resourceIdFromRequest(request, 'listingId'),
     request.auth?.userId as string,
     (client, listing) => publishListing(client, listing.id)
   )

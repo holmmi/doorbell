@@ -4,7 +4,7 @@ import type {
   ListingImage,
   ListingImageResponse,
 } from '../types/listing.js'
-import { createPresignedImageDownload } from './imageService.js'
+import { createPresignedImageDownload } from '../services/imageService.js'
 
 export const listingImageResponse = async (
   image: ListingImage

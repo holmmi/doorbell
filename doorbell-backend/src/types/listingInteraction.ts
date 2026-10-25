@@ -15,12 +15,6 @@ export interface Applicant {
   tenantId: string
   firstName: string
   lastName: string
-  picturePath: string | null
-}
-
-export interface ApplicantsResponse {
-  applicants: Applicant[]
-  count: number
 }
 
 export interface LandlordContact {
@@ -31,15 +25,13 @@ export interface LandlordContact {
 }
 
 export interface Match {
-  listingId: string
   createdAt: Date
-  listing: ListingFeedItem
+  listing: Omit<ListingFeedItem, 'ownerId' | 'createdAt'>
   landlord: LandlordContact
 }
 
 export interface MatchResponse {
-  listingId: string
   createdAt: string
-  listing: ListingFeedResponse
+  listing: Omit<ListingFeedResponse, 'ownerId' | 'createdAt'>
   landlord: LandlordContact
 }

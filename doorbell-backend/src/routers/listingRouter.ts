@@ -1,15 +1,6 @@
 import { Router } from 'express'
 
 import {
-  getListingApplicants,
-  putApplicantDecision,
-  putListingPreference,
-} from '../controllers/listingInteractionController.js'
-import {
-  decisionSchema,
-  preferenceSchema,
-} from '../schemas/listingInteraction.js'
-import {
   createRentalListing,
   getRentalListingFeed,
   getRentalListing,
@@ -33,21 +24,6 @@ import {
 
 const listingRouter = Router()
 const landlordOnly = [authenticate, requireRole('LANDLORD')]
-
-listingRouter.put(
-  '/:listingId/preference',
-  authenticate,
-  requireRole('TENANT'),
-  validateRequestBody(preferenceSchema),
-  putListingPreference
-)
-listingRouter.get('/:listingId/applicants', landlordOnly, getListingApplicants)
-listingRouter.put(
-  '/:listingId/applicants/:tenantId/decision',
-  landlordOnly,
-  validateRequestBody(decisionSchema),
-  putApplicantDecision
-)
 
 listingRouter.get('/', optionalAuthenticate, getRentalListingFeed)
 listingRouter.post(

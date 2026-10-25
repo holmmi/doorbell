@@ -1,13 +1,14 @@
+import type { Request } from 'express'
+
 import { RequestError } from './requestError.js'
 
-// Keep BIGINT IDs as decimal strings throughout the request and database layers.
-export const resourceId = (value: unknown): string => {
-  if (
-    typeof value !== 'string' ||
-    !/^[1-9]\d{0,18}$/.test(value) ||
-    BigInt(value) > 9223372036854775807n
-  ) {
+export const resourceIdFromRequest = (
+  request: Request,
+  parameter: string
+): string => {
+  const id = Number(request.params[parameter])
+  if (!Number.isSafeInteger(id) || id <= 0) {
     throw new RequestError(400, 'error.request.invalid')
   }
-  return value
+  return id.toString()
 }
