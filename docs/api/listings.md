@@ -1,15 +1,14 @@
 # Rental listings
 
+For tenant preferences, landlord applicant decisions and tenant matches, see
+[Preferences, applicants and matches](interactions.md).
+
 Management routes are under `/api/listing` and require
 `Authorization: Bearer <access-token>` from a current `LANDLORD` account.
 Missing/invalid authentication returns 401; accounts without the landlord role
-return 403. Missing listings, invalid listing IDs and another landlord's
+return 403. Missing listings and another landlord's
 listings all return 404 with `{"error":"error.listing.notFound"}`. IDs are
 decimal strings to preserve PostgreSQL `BIGINT` precision.
-
-Listing path IDs are parsed as numbers and must be positive safe integers
-(at most 9,007,199,254,740,991). They are normalized to decimal strings before
-database access. Values outside this range return 404.
 
 ## Listing feed
 
@@ -265,6 +264,7 @@ Other expected failures use `{ "error": "<translation-key>" }`:
 
 | Status | Error                                  | Meaning                                                  |
 | ------ | -------------------------------------- | -------------------------------------------------------- |
+| 400    | `error.request.invalid`                | Invalid path ID or malformed JSON body                   |
 | 400    | `error.listing.image.invalidKey`       | Key is foreign, unissued, expired or retired             |
 | 400    | `error.listing.image.invalidObject`    | Object is empty or MIME type does not match              |
 | 404    | `error.listing.image.notFound`         | Image ID does not belong to this listing                 |

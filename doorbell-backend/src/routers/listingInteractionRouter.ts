@@ -1,0 +1,40 @@
+import { Router } from 'express'
+
+import {
+  createApplicantDecision,
+  createListingPreference,
+  getListingApplicants,
+  getMatches,
+} from '../controllers/listingInteractionController.js'
+import { authenticate } from '../middlewares/authenticate.js'
+import { requireRole } from '../middlewares/requireRole.js'
+import { validateRequestBody } from '../middlewares/validateRequest.js'
+import {
+  decisionSchema,
+  preferenceSchema,
+} from '../schemas/listingInteraction.js'
+
+const listingInteractionRouter = Router()
+const landlordOnly = [authenticate, requireRole('LANDLORD')]
+const tenantOnly = [authenticate, requireRole('TENANT')]
+
+listingInteractionRouter.get('/matches', tenantOnly, getMatches)
+listingInteractionRouter.post(
+  '/:listingId/preference',
+  tenantOnly,
+  validateRequestBody(preferenceSchema),
+  createListingPreference
+)
+listingInteractionRouter.get(
+  '/:listingId/applicants',
+  landlordOnly,
+  getListingApplicants
+)
+listingInteractionRouter.post(
+  '/:listingId/applicants/:tenantId/decision',
+  landlordOnly,
+  validateRequestBody(decisionSchema),
+  createApplicantDecision
+)
+
+export default listingInteractionRouter

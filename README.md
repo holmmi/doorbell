@@ -108,6 +108,7 @@ npm run dev --workspace=doorbell-backend
 
 - [Users and authentication API](docs/api/users.md)
 - [Rental listing API](docs/api/listings.md)
+- [Preferences, applicants and matches API](docs/api/interactions.md)
 
 ## Building, linting, and testing
 
