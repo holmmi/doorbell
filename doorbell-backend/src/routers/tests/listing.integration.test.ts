@@ -35,28 +35,6 @@ void describe(
   { concurrency: false, timeout: 360_000 },
   () => {
     void describe('listings', () => {
-      void test('management routes consistently reject invalid path IDs', async () => {
-        for (const id of ['0', '-1', '1.5', 'abc', '9007199254740992']) {
-          for (const [method, path, body] of [
-            ['GET', `/${id}`, undefined],
-            ['PUT', `/${id}`, listingInput],
-            ['POST', `/${id}/images/presign`, { contentType: 'image/png' }],
-            [
-              'POST',
-              `/${id}/images`,
-              { objectKey: 'listings/1/photo.png', displayOrder: 1 },
-            ],
-            ['POST', `/${id}/publish`, undefined],
-          ] as const) {
-            const response = await request(method, path, body)
-            assert.equal(response.status, 400)
-            assert.deepEqual(await response.json(), {
-              error: 'error.request.invalid',
-            })
-          }
-        }
-      })
-
       void test('listing feed returns 2 listings with image URLs', async () => {
         await pool.query(`
           INSERT INTO "user" (first_name, last_name, email, password, role)

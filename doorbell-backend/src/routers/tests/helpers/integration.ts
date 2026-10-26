@@ -52,6 +52,8 @@ let server: Server | undefined
 export let baseUrl: string
 let token: string
 
+// Importing this module registers these hooks with node:test at file scope.
+// Each test file runs in its own process by default, so its fixtures are isolated.
 before(
   async () => {
     // Dedicated containers and random host ports keep development data untouched.

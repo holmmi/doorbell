@@ -113,8 +113,8 @@ route with isolated test environment variables and a stubbed PostgreSQL
 `pool.query`. It loads database configuration but never connects to PostgreSQL,
 so that test file requires no running database.
 
-`src/routers/tests/listingRouter.integration.test.ts` and
-`src/routers/tests/interaction.integration.test.ts` run with the other backend
+`src/routers/tests/listing.integration.test.ts` and
+`src/routers/tests/listingInteraction.integration.test.ts` run with the other backend
 tests through `npm test --workspace=doorbell-backend`. They require a running
 Docker-compatible runtime with Linux containers and fail if none is available.
 Pinned `@testcontainers/postgresql` and `@testcontainers/s3mock` packages start
