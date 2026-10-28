@@ -3,7 +3,7 @@ import { useState, type MouseEvent, type PointerEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router'
 import type { HomeListing } from '../../types/listing'
-import { formatDayMonth, formatNumber } from './format'
+import { formatDayMonth, formatNumber } from '../../utils/format'
 import { ChevronLeftIcon, ChevronRightIcon } from './icons'
 
 interface ListingCardProps {

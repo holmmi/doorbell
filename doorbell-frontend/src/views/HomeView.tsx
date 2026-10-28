@@ -23,7 +23,7 @@ import { BellRingIcon } from '../components/home/icons'
 import { LandlordStrip } from '../components/home/LandlordStrip'
 import { SwipeDeck } from '../components/home/SwipeDeck'
 import { Testimonials } from '../components/home/Testimonials'
-import { toIsoDate } from '../components/home/format'
+import { toIsoDate } from '../utils/format'
 import type { FeedFilters, HomeListing } from '../types/listing'
 import type { UserRole } from '../types/user'
 

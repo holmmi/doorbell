@@ -2,7 +2,7 @@ import { Box, MenuItem, Select, Typography } from '@mui/material'
 import type { ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { FeedFilters } from '../../types/listing'
-import { formatNumber } from './format'
+import { formatNumber } from '../../utils/format'
 
 const cities = ['Helsinki', 'Espoo', 'Tampere', 'Turku']
 const maxPrices = [1000, 1250, 1500, 2000, 3000, 5000]
