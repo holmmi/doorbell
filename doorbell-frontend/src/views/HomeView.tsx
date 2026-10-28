@@ -13,7 +13,7 @@ import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router'
 import { ApiError, getToken } from '../api/client'
-import { listingClient } from '../api/listingClient'
+import { getFeed } from '../api/listingClient'
 import { userClient } from '../api/userClient'
 import { EmptyDeck } from '../components/home/EmptyDeck'
 import { Faq } from '../components/home/Faq'
@@ -83,8 +83,7 @@ export function HomeView() {
 
   useEffect(() => {
     let ignore = false
-    listingClient
-      .getFeed()
+    getFeed()
       .then((feed) => {
         if (!ignore) setListings(feed)
       })
