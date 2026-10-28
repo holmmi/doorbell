@@ -3,12 +3,12 @@
 For tenant preferences, landlord applicant decisions and tenant matches, see
 [Preferences, applicants and matches](interactions.md).
 
-Management routes are under `/api/listing` and require
+Write routes (`POST` and `PUT`) are under `/api/listing` and require
 `Authorization: Bearer <access-token>` from a current `LANDLORD` account.
 Missing/invalid authentication returns 401; accounts without the landlord role
-return 403. Missing listings and another landlord's
-listings all return 404 with `{"error":"error.listing.notFound"}`. IDs are
-decimal strings to preserve PostgreSQL `BIGINT` precision.
+return 403. Writes to missing listings or listings owned by another user return
+404 with `{"error":"error.listing.notFound"}`. Read access is described below.
+IDs are decimal strings to preserve PostgreSQL `BIGINT` precision.
 
 ## Listing feed
 
@@ -63,8 +63,22 @@ pre-signed URL for any upload that was started before this migration.
 ## Create and read
 
 `POST /api/listing` accepts the basic fields below and returns HTTP 201 with
-`{"id":"42"}`. New listings are unpublished. `GET /api/listing/42` returns
-the owner's listing and its finalized images, sorted by persisted `displayOrder`.
+`{"id":"42"}`. Creation requires a current `LANDLORD` account. New listings
+are unpublished.
+
+`GET /api/listing/42` returns a published listing to everyone, including
+anonymous visitors, tenants and other landlords. Authentication is optional;
+send `Authorization: Bearer <access-token>` to also access your own unpublished
+listing while your account has the `LANDLORD` role. Missing listings and
+unpublished listings that the caller cannot access return HTTP 404 with
+`{"error":"error.listing.notFound"}`. An invalid bearer token returns HTTP 401,
+even for a published listing. Invalid path IDs return HTTP 400.
+
+The response includes the listing details, computed `ready` state and finalized
+images sorted by persisted `displayOrder`, with the same pre-signed image URLs
+as the feed. Retrieve the listing again to refresh expired image URLs. Feed
+exclusions do not apply to this endpoint: a tenant can retrieve a published
+listing by ID even after liking or disliking it.
 
 ## Update details
 

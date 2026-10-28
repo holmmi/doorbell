@@ -9,8 +9,10 @@ import {
   queueListingImageCleanup,
   updateListing,
   updateListingImage,
+  withListingLock,
   withOwnedListing,
 } from '../repositories/listingRepository.js'
+import { findUserRoleById } from '../repositories/userRepository.js'
 import type {
   ImageUploadInput,
   ListingImage,
@@ -19,6 +21,21 @@ import type {
 } from '../types/listing.js'
 import { RequestError } from '../utils/requestError.js'
 import { isListingKey, verifyImageObject } from './imageService.js'
+
+export const getRentalListingDetails = async (
+  listingId: string,
+  userId: string | undefined
+) =>
+  withListingLock(listingId, undefined, async (client, listing) => {
+    if (
+      !listing.published &&
+      (listing.ownerId !== userId ||
+        (await findUserRoleById(userId, client)) !== 'LANDLORD')
+    ) {
+      throw new RequestError(404, 'error.listing.notFound')
+    }
+    return getListingDetails(client, listing)
+  })
 
 const verifyListingUpload = async (
   client: PoolClient,

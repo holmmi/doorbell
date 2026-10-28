@@ -1,3 +1,5 @@
+import type { PoolClient } from 'pg'
+
 import { pool } from '../config/database.js'
 import type {
   CreatedUser,
@@ -94,9 +96,10 @@ export const createUser = async (
 }
 
 export const findUserRoleById = async (
-  userId: string
+  userId: string,
+  client: Pick<PoolClient, 'query'> = pool
 ): Promise<UserRole | undefined> => {
-  const result = await pool.query<{ role: UserRole }>(findUserRoleByIdQuery, [
+  const result = await client.query<{ role: UserRole }>(findUserRoleByIdQuery, [
     userId,
   ])
 

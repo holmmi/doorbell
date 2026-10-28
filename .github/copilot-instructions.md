@@ -112,6 +112,9 @@ middleware using an isolated Express app.
 route with isolated test environment variables and a stubbed PostgreSQL
 `pool.query`. It loads database configuration but never connects to PostgreSQL,
 so that test file requires no running database.
+`src/routers/tests/listingAccess.test.ts` exercises listing read access and
+draft privacy with stubbed PostgreSQL queries and transaction clients. It
+also runs without a database or object storage service.
 
 `src/routers/tests/listing.integration.test.ts` and
 `src/routers/tests/listingInteraction.integration.test.ts` run with the other backend
@@ -196,8 +199,10 @@ Both runtime images include `curl` for future healthchecks.
   JPEG uploads are supported by the current image service. Publication requires
   at least one image to be finalized successfully.
 - Listing updates use complete basic details and an optional complete `images`
-  set. Omitting `images` preserves it; an empty set unpublishes. The owner GET
-  and PUT responses include sorted images and computed readiness. See
+  set. Omitting `images` preserves it; an empty set unpublishes. The listing GET
+  and PUT responses include sorted images and computed readiness. Published
+  listings can be read by anyone; unpublished listings require their current
+  landlord owner. Writes remain restricted to the current landlord owner. See
   `docs/api/listings.md` for the API contract and request examples.
 - All listing mutations lock the parent row in a transaction. Migration V3
   makes image order uniqueness deferrable for safe swaps, records issued uploads
