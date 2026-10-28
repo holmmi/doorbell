@@ -14,80 +14,93 @@ export type ListingPreview = {
   imageUrl?: string
 }
 
-const euro = new Intl.NumberFormat('en-US', {
-  style: 'currency',
-  currency: 'EUR',
-  maximumFractionDigits: 0,
-})
-const decimal = new Intl.NumberFormat('en-US', { maximumFractionDigits: 1 })
+const cardSx = {
+  bgcolor: 'background.paper',
+  border: `1.5px solid ${brand.purple}`,
+  borderRadius: '24px',
+  overflow: 'hidden',
+  boxShadow: shadows.card,
+} as const
 
-const today = () => new Date().toISOString().slice(0, 10)
+const photoFrameSx = {
+  position: 'relative',
+  aspectRatio: '16 / 10',
+  bgcolor: brand.purple100,
+} as const
 
-export function ListingPreviewCard({ listing }: { listing: ListingPreview }) {
-  const { t } = useTranslation()
+const photoSx = {
+  position: 'absolute',
+  inset: 0,
+  width: '100%',
+  height: '100%',
+  objectFit: 'cover',
+  display: 'block',
+} as const
 
+const newTagSx = {
+  position: 'absolute',
+  top: 16,
+  left: 16,
+  display: 'inline-flex',
+  px: '12px',
+  py: '6px',
+  borderRadius: '8px',
+  bgcolor: brand.purple,
+  color: 'common.white',
+  fontSize: 13,
+  fontWeight: 700,
+  letterSpacing: '0.04em',
+  lineHeight: 1.2,
+  textTransform: 'uppercase',
+} as const
+
+const priceRowSx = {
+  display: 'flex',
+  alignItems: 'baseline',
+  justifyContent: 'space-between',
+  gap: 1.5,
+  flexWrap: 'wrap',
+} as const
+
+// "YYYY-MM-DD" in the user's own time zone, comparable with date inputs.
+const localToday = () => {
+  const now = new Date()
+  now.setMinutes(now.getMinutes() - now.getTimezoneOffset())
+  return now.toISOString().slice(0, 10)
+}
+
+export const ListingPreviewCard = ({
+  listing,
+}: {
+  listing: ListingPreview
+}) => {
+  const { t, i18n } = useTranslation()
+  const locale = i18n.language
+
+  const price = new Intl.NumberFormat(locale, {
+    style: 'currency',
+    currency: 'EUR',
+    maximumFractionDigits: 0,
+  }).format(listing.rent)
+  const size = new Intl.NumberFormat(locale, {
+    maximumFractionDigits: 1,
+  }).format(listing.squareMeters)
   const available =
-    listing.availableFrom && listing.availableFrom > today()
+    listing.availableFrom > localToday()
       ? t('listing.availableOn', {
           date: new Date(
             `${listing.availableFrom}T00:00:00`
-          ).toLocaleDateString('en-US', { month: 'long', day: 'numeric' }),
+          ).toLocaleDateString(locale, { month: 'long', day: 'numeric' }),
         })
       : t('listing.availableNow')
 
   return (
-    <Box
-      component="article"
-      sx={{
-        bgcolor: '#FFFFFF',
-        border: `1.5px solid ${brand.purple}`,
-        borderRadius: '24px',
-        overflow: 'hidden',
-        boxShadow: shadows.card,
-      }}
-    >
-      <Box
-        sx={{
-          position: 'relative',
-          aspectRatio: '16 / 10',
-          bgcolor: brand.purple100,
-        }}
-      >
+    <Box component="article" sx={cardSx}>
+      <Box sx={photoFrameSx}>
         {listing.imageUrl ? (
-          <Box
-            component="img"
-            src={listing.imageUrl}
-            alt=""
-            sx={{
-              position: 'absolute',
-              inset: 0,
-              width: '100%',
-              height: '100%',
-              objectFit: 'cover',
-              display: 'block',
-            }}
-          />
+          <Box component="img" src={listing.imageUrl} alt="" sx={photoSx} />
         ) : null}
-        <Box
-          component="span"
-          sx={{
-            position: 'absolute',
-            top: 16,
-            left: 16,
-            zIndex: 1,
-            display: 'inline-flex',
-            px: '12px',
-            py: '6px',
-            borderRadius: '8px',
-            bgcolor: brand.purple,
-            color: '#FFFFFF',
-            fontSize: 13,
-            fontWeight: 700,
-            letterSpacing: '0.04em',
-            lineHeight: 1.2,
-            textTransform: 'uppercase',
-          }}
-        >
+        <Box component="span" sx={newTagSx}>
           {t('listing.newToday')}
         </Box>
       </Box>
@@ -101,20 +114,12 @@ export function ListingPreviewCard({ listing }: { listing: ListingPreview }) {
         }}
       >
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
-          <Box
-            sx={{
-              display: 'flex',
-              alignItems: 'baseline',
-              justifyContent: 'space-between',
-              gap: 1.5,
-              flexWrap: 'wrap',
-            }}
-          >
+          <Box sx={priceRowSx}>
             <Typography
               component="span"
               sx={{ fontSize: 28, fontWeight: 800, letterSpacing: '-0.02em' }}
             >
-              {t('listing.perMonth', { price: euro.format(listing.rent) })}
+              {t('listing.perMonth', { price })}
             </Typography>
             <Typography
               component="span"
@@ -141,9 +146,7 @@ export function ListingPreviewCard({ listing }: { listing: ListingPreview }) {
             component="span"
             sx={{ fontSize: 16, color: 'text.secondary' }}
           >
-            {`${t(`listing.roomTypes.${listing.rooms}`)} · ${t('listing.area', {
-              size: decimal.format(listing.squareMeters),
-            })}`}
+            {`${t(`listing.roomTypes.${listing.rooms}`)} · ${t('listing.area', { size })}`}
           </Typography>
         </Box>
       </Box>

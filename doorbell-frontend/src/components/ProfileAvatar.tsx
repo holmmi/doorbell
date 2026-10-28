@@ -6,10 +6,10 @@ type ProfileAvatarProps = {
   alt?: string
 }
 
-export function ProfileAvatar({
+export const ProfileAvatar = ({
   src,
   alt = 'Profile picture',
-}: ProfileAvatarProps) {
+}: ProfileAvatarProps) => {
   return (
     <RouterLink
       to="/profile"

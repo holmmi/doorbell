@@ -36,7 +36,7 @@ const roleOptions = [
   },
 ] as const
 
-export function RegistrationView() {
+export const RegistrationView = () => {
   const { t } = useTranslation()
   const navigate = useNavigate()
   const { register } = useAuth()

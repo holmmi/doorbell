@@ -20,7 +20,7 @@ export const clearToken = () => localStorage.removeItem(TOKEN_KEY)
 
 type JsonRequestInit = Omit<RequestInit, 'body'> & { body?: unknown }
 
-function getErrorCode(body: unknown): string {
+const getErrorCode = (body: unknown): string => {
   if (typeof body !== 'object' || body === null) return 'error.unknown'
 
   if ('error' in body && typeof body.error === 'string') return body.error

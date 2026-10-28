@@ -1,7 +1,7 @@
 import { Box, CircularProgress } from '@mui/material'
 import { useTranslation } from 'react-i18next'
 
-export function PageLoader() {
+export const PageLoader = () => {
   const { t } = useTranslation()
 
   return (

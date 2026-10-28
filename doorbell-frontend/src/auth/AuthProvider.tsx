@@ -6,11 +6,11 @@ import {
   type ReactNode,
 } from 'react'
 import { ApiError, getToken } from '../api/client'
-import { userClient } from '../api/userClient'
+import * as userClient from '../api/userClient'
+import { AuthContext, type AuthStatus } from '../hooks/useAuth'
 import type { LoginInput, RegistrationInput, UserInfo } from '../types/user'
-import { AuthContext, type AuthStatus } from './authContext'
 
-export function AuthProvider({ children }: { children: ReactNode }) {
+export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<UserInfo | null>(null)
   const [status, setStatus] = useState<AuthStatus>(() =>
     getToken() ? 'loading' : 'anonymous'

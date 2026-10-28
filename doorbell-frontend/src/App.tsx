@@ -1,32 +1,41 @@
 import { CssBaseline } from '@mui/material'
 import { ThemeProvider } from '@mui/material/styles'
-import { lazy, Suspense } from 'react'
+import { lazy, Suspense, type ComponentType } from 'react'
 import { BrowserRouter, Route, Routes } from 'react-router'
+import { AuthProvider } from './auth/AuthProvider'
+import { ProtectedRoute } from './auth/ProtectedRoute'
 import { AppShell } from './components/AppShell'
 import { AuthLayout } from './components/AuthLayout'
 import { PageLoader } from './components/PageLoader'
-import { AuthProvider } from './auth/AuthProvider'
 import './i18n'
 import { theme } from './theme/theme'
-import { HomeView } from './views/HomeView'
-import { MatchesView } from './views/MatchesView'
-import { ProfileView } from './views/ProfileView'
 
-const LoginView = lazy(() =>
-  import('./views/LoginView').then(({ LoginView }) => ({ default: LoginView }))
+// Views are named exports, so map each one to the default export lazy expects.
+const lazyView = <T extends Record<string, ComponentType>>(
+  load: () => Promise<T>,
+  name: keyof T
+) => lazy(() => load().then((module) => ({ default: module[name] })))
+
+const HomeView = lazyView(() => import('./views/HomeView'), 'HomeView')
+const MatchesView = lazyView(() => import('./views/MatchesView'), 'MatchesView')
+const ProfileView = lazyView(() => import('./views/ProfileView'), 'ProfileView')
+const LoginView = lazyView(() => import('./views/LoginView'), 'LoginView')
+const RegistrationView = lazyView(
+  () => import('./views/RegistrationView'),
+  'RegistrationView'
 )
-const RegistrationView = lazy(() =>
-  import('./views/RegistrationView').then(({ RegistrationView }) => ({
-    default: RegistrationView,
-  }))
-)
-const CreateListingView = lazy(() =>
-  import('./views/CreateListingView').then(({ CreateListingView }) => ({
-    default: CreateListingView,
-  }))
+const CreateListingView = lazyView(
+  () => import('./views/CreateListingView'),
+  'CreateListingView'
 )
 
-function App() {
+const page = (View: ComponentType) => (
+  <Suspense fallback={<PageLoader />}>
+    <View />
+  </Suspense>
+)
+
+const App = () => {
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
@@ -34,35 +43,20 @@ function App() {
         <BrowserRouter>
           <Routes>
             <Route element={<AuthLayout />}>
-              <Route
-                path="/login"
-                element={
-                  <Suspense fallback={<PageLoader />}>
-                    <LoginView />
-                  </Suspense>
-                }
-              />
-              <Route
-                path="/registration"
-                element={
-                  <Suspense fallback={<PageLoader />}>
-                    <RegistrationView />
-                  </Suspense>
-                }
-              />
+              <Route path="/login" element={page(LoginView)} />
+              <Route path="/registration" element={page(RegistrationView)} />
             </Route>
             <Route element={<AppShell />}>
-              <Route path="/" element={<HomeView />} />
-              <Route path="/matches" element={<MatchesView />} />
-              <Route path="/profile" element={<ProfileView />} />
-              <Route
-                path="/landlord/listings/new"
-                element={
-                  <Suspense fallback={<PageLoader />}>
-                    <CreateListingView />
-                  </Suspense>
-                }
-              />
+              <Route path="/" element={page(HomeView)} />
+              <Route element={<ProtectedRoute />}>
+                <Route path="/profile" element={page(ProfileView)} />
+              </Route>
+              <Route element={<ProtectedRoute role="TENANT" />}>
+                <Route path="/matches" element={page(MatchesView)} />
+              </Route>
+              <Route element={<ProtectedRoute role="LANDLORD" />}>
+                <Route path="/listing/new" element={page(CreateListingView)} />
+              </Route>
             </Route>
           </Routes>
         </BrowserRouter>

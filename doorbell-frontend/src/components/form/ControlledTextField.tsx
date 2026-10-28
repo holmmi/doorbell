@@ -16,7 +16,7 @@ type ControlledTextFieldProps<
   label: string
 }
 
-export function ControlledTextField<
+export const ControlledTextField = <
   T extends FieldValues,
   TTransformed extends FieldValues = T,
 >({
@@ -25,7 +25,7 @@ export function ControlledTextField<
   label,
   helperText,
   ...props
-}: ControlledTextFieldProps<T, TTransformed>) {
+}: ControlledTextFieldProps<T, TTransformed>) => {
   const { t } = useTranslation()
   const id = `field-${String(name)}`
 

@@ -4,7 +4,7 @@ type MatchesBadgeProps = {
   count: number
 }
 
-export function MatchesBadge({ count }: MatchesBadgeProps) {
+export const MatchesBadge = ({ count }: MatchesBadgeProps) => {
   return (
     <Box
       component="span"

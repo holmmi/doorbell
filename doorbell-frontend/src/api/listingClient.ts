@@ -8,24 +8,31 @@ import type {
   PublishedListing,
 } from '../types/listing'
 
-async function createListing(input: ListingInput): Promise<CreatedListing> {
-  return authenticatedClient.request<CreatedListing>('/listing', {
+const listingPath = (listingId: string) =>
+  `/listing/${encodeURIComponent(listingId)}`
+
+export const createListing = (input: ListingInput): Promise<CreatedListing> =>
+  authenticatedClient.request<CreatedListing>('/listing', {
     method: 'POST',
     body: input,
   })
-}
 
-async function requestImageUpload(
+export const getListing = (listingId: string): Promise<ListingDetails> =>
+  authenticatedClient.request<ListingDetails>(listingPath(listingId))
+
+export const requestImageUpload = (
   listingId: string,
   contentType: string
-): Promise<PresignedImageUpload> {
-  return authenticatedClient.request<PresignedImageUpload>(
-    `/listing/${encodeURIComponent(listingId)}/images/presign`,
+): Promise<PresignedImageUpload> =>
+  authenticatedClient.request<PresignedImageUpload>(
+    `${listingPath(listingId)}/images/presign`,
     { method: 'POST', body: { contentType } }
   )
-}
 
-async function uploadImage(uploadUrl: string, file: File): Promise<void> {
+export const uploadImage = async (
+  uploadUrl: string,
+  file: File
+): Promise<void> => {
   let response: Response
   try {
     response = await fetch(uploadUrl, {
@@ -42,28 +49,18 @@ async function uploadImage(uploadUrl: string, file: File): Promise<void> {
   }
 }
 
-async function saveListingImages(
+export const saveListingImages = (
   listingId: string,
   input: ListingInput,
   images: ListingImageInput[]
-): Promise<ListingDetails> {
-  return authenticatedClient.request<ListingDetails>(
-    `/listing/${encodeURIComponent(listingId)}`,
-    { method: 'PUT', body: { ...input, images } }
-  )
-}
+): Promise<ListingDetails> =>
+  authenticatedClient.request<ListingDetails>(listingPath(listingId), {
+    method: 'PUT',
+    body: { ...input, images },
+  })
 
-async function publishListing(listingId: string): Promise<PublishedListing> {
-  return authenticatedClient.request<PublishedListing>(
-    `/listing/${encodeURIComponent(listingId)}/publish`,
+export const publishListing = (listingId: string): Promise<PublishedListing> =>
+  authenticatedClient.request<PublishedListing>(
+    `${listingPath(listingId)}/publish`,
     { method: 'POST' }
   )
-}
-
-export const listingClient = {
-  createListing,
-  requestImageUpload,
-  uploadImage,
-  saveListingImages,
-  publishListing,
-}

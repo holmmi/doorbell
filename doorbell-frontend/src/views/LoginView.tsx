@@ -10,7 +10,7 @@ import { ControlledTextField } from '../components/form/ControlledTextField'
 import { useAuth } from '../hooks/useAuth'
 import { loginSchema, type LoginFormValues } from '../schemas/auth'
 
-export function LoginView() {
+export const LoginView = () => {
   const { t } = useTranslation()
   const navigate = useNavigate()
   const { login } = useAuth()

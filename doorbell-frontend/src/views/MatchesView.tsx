@@ -1,7 +1,7 @@
 import { Box, Typography } from '@mui/material'
 import { useTranslation } from 'react-i18next'
 
-export function MatchesView() {
+export const MatchesView = () => {
   const { t } = useTranslation()
 
   return (

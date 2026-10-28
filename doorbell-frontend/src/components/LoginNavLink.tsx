@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { NavLink } from 'react-router'
 import { LogInIcon } from './icons'
 
-export function LoginNavLink() {
+export const LoginNavLink = () => {
   const { t } = useTranslation()
   const theme = useTheme()
 

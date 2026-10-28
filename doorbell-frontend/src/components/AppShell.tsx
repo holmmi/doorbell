@@ -3,18 +3,20 @@ import { useTheme } from '@mui/material/styles'
 import { NavLink, Outlet } from 'react-router'
 import { useTranslation } from 'react-i18next'
 import { useAuth } from '../hooks/useAuth'
+import type { UserRole } from '../types/user'
 import { DoorbellLogo } from './DoorbellLogo'
 import { LoginNavLink } from './LoginNavLink'
 import { MatchesBadge } from './MatchesBadge'
 import { ProfileAvatar } from './ProfileAvatar'
 
+// `role` limits an item to one account type; signed-out users only see Home.
 const navItems = [
   { key: 'home', to: '/' },
-  { key: 'matches', to: '/matches' },
+  { key: 'matches', to: '/matches', role: 'TENANT' },
   { key: 'profile', to: '/profile' },
-] as const
+] as const satisfies { key: string; to: string; role?: UserRole }[]
 
-export function AppShell() {
+export const AppShell = () => {
   const { t } = useTranslation()
   const theme = useTheme()
   const { user, status } = useAuth()
@@ -61,7 +63,11 @@ export function AppShell() {
             }}
           >
             {navItems
-              .filter((item) => isLoggedIn || item.key === 'home')
+              .filter((item) =>
+                user
+                  ? !('role' in item) || item.role === user.role
+                  : item.key === 'home'
+              )
               .map((item) => (
                 <NavLink
                   key={item.key}
@@ -102,10 +108,7 @@ export function AppShell() {
                   ml: { xs: -1, md: -2 },
                 }}
               >
-                <ProfileAvatar
-                  src={user?.picturePath}
-                  alt={t('profile.avatarAlt')}
-                />
+                <ProfileAvatar alt={t('profile.avatarAlt')} />
               </Box>
             ) : null}
           </Box>

@@ -3,9 +3,9 @@ import { Link as RouterLink } from 'react-router'
 import { useTranslation } from 'react-i18next'
 import { useAuth } from '../hooks/useAuth'
 
-export function HomeView() {
+export const HomeView = () => {
   const { t } = useTranslation()
-  const { status } = useAuth()
+  const { user } = useAuth()
 
   return (
     <Box
@@ -47,15 +47,17 @@ export function HomeView() {
           {t('home.subtitle')}
         </Typography>
 
-        <Button
-          component={RouterLink}
-          to={status === 'authenticated' ? '/landlord/listings/new' : '/login'}
-          variant="contained"
-          size="large"
-          sx={{ mt: 4 }}
-        >
-          {t('listing.createCta')}
-        </Button>
+        {user?.role === 'TENANT' ? null : (
+          <Button
+            component={RouterLink}
+            to={user ? '/listing/new' : '/login'}
+            variant="contained"
+            size="large"
+            sx={{ mt: 4 }}
+          >
+            {t('listing.createCta')}
+          </Button>
+        )}
       </Box>
     </Box>
   )

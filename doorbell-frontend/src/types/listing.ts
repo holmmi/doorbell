@@ -32,8 +32,18 @@ export interface ListingImageInput {
   displayOrder: number
 }
 
-export interface ListingDetails extends ListingInput {
+// GET/PUT /listing/:id response. Numeric columns arrive as strings ("1950.00").
+export interface ListingDetails {
   id: string
+  ownerId: string
+  createdAt: string
+  monthlyPrice: string
+  squareMeters: string
+  neighborhood: string
+  city: string
+  availableFrom: string
+  extraCosts: string
+  rooms: ListingRoom
   published: boolean
   ready: boolean
   images: Array<{

@@ -31,6 +31,7 @@ const resources = {
           'Add the basics. Renters swipe, and you get a ring when someone likes it.',
         neighborhood: 'Neighbourhood',
         neighborhoodPlaceholder: 'e.g. Kamppi',
+        cityPlaceholder: 'e.g. Helsinki',
         city: 'City',
         availableFrom: 'Available from',
         rooms: 'Rooms',
@@ -111,7 +112,6 @@ const resources = {
       },
       error: {
         listing: {
-          landlordOnly: 'Only landlord accounts can create listings.',
           notFound: 'This listing could not be found.',
           image: {
             invalidKey: 'A photo upload expired. Please try again.',
@@ -138,7 +138,7 @@ const resources = {
           unauthorized: 'Please sign in again.',
         },
         authorization: {
-          forbidden: 'Only landlord accounts can create listings.',
+          forbidden: 'You do not have access to this page.',
         },
         login: {
           invalidCredentials: 'The email or password is incorrect.',
