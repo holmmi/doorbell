@@ -17,7 +17,7 @@ import { usePublishListing } from '../hooks/usePublishListing'
 import { listingFormSchema } from '../schemas/listing'
 import type { ListingFormInput, ListingFormValues } from '../schemas/listing'
 import { brand, shadows } from '../theme/tokens'
-import { listingRooms } from '../types/listing'
+import { rooms } from '../types/listing'
 
 const defaultValues: ListingFormInput = {
   neighborhood: '',
@@ -291,7 +291,7 @@ export const CreateListingView = () => {
                 name="rooms"
                 render={({ field }) => (
                   <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-                    {listingRooms.map((room) => (
+                    {rooms.map((room) => (
                       <Chip
                         key={room}
                         label={t(`listing.roomTypes.${room}`)}

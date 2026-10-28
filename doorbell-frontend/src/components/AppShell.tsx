@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next'
 import { useAuth } from '../hooks/useAuth'
 import type { UserRole } from '../types/user'
 import { DoorbellLogo } from './DoorbellLogo'
+import { Footer } from './Footer'
 import { LoginNavLink } from './LoginNavLink'
 import { MatchesBadge } from './MatchesBadge'
 import { ProfileAvatar } from './ProfileAvatar'
@@ -23,7 +24,14 @@ export const AppShell = () => {
   const isLoggedIn = status === 'authenticated'
 
   return (
-    <Box sx={{ minHeight: '100vh', backgroundColor: 'background.default' }}>
+    <Box
+      sx={{
+        minHeight: '100vh',
+        display: 'flex',
+        flexDirection: 'column',
+        backgroundColor: 'background.default',
+      }}
+    >
       <AppBar
         position="sticky"
         color="transparent"
@@ -115,9 +123,11 @@ export const AppShell = () => {
         </Toolbar>
       </AppBar>
 
-      <Container maxWidth="xl" sx={{ py: { xs: 2, md: 0 } }}>
+      <Container maxWidth="xl" sx={{ flex: 1, py: { xs: 2, md: 0 } }}>
         <Outlet />
       </Container>
+
+      <Footer />
     </Box>
   )
 }

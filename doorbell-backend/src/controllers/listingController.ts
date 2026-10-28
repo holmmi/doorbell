@@ -8,10 +8,11 @@ import {
   registerListingImageUpload,
   withOwnedListing,
 } from '../repositories/listingRepository.js'
+import { createPresignedImageUpload } from '../services/imageService.js'
 import {
-  createPresignedImageDownload,
-  createPresignedImageUpload,
-} from '../services/imageService.js'
+  listingFeedResponse,
+  listingImageResponse,
+} from '../mappers/listingResponse.js'
 import {
   finalizeListingImage,
   updateRentalListingDetails,
@@ -23,31 +24,13 @@ import type {
   ListingDetailsResponse,
   ListingUpdateInput,
 } from '../types/listing.js'
-import { RequestError } from '../utils/requestError.js'
-
-const listingIdFromRequest = (request: Parameters<RequestHandler>[0]) => {
-  const listingId = Number(request.params.listingId)
-  if (!Number.isSafeInteger(listingId) || listingId <= 0) {
-    throw new RequestError(404, 'error.listing.notFound')
-  }
-  return listingId.toString()
-}
-
-const listingImageResponse = async (image: {
-  id: string
-  imagePath: string
-  displayOrder: number
-}) => ({
-  id: image.id,
-  displayOrder: image.displayOrder,
-  imageUrl: await createPresignedImageDownload(image.imagePath),
-})
+import { resourceIdFromRequest } from '../utils/resourceId.js'
 
 const listingResponse = async (
   listing: ListingDetails
 ): Promise<ListingDetailsResponse> => ({
-  ...listing,
-  images: await Promise.all(listing.images.map(listingImageResponse)),
+  ...(await listingFeedResponse(listing)),
+  ready: listing.ready,
 })
 
 export const createRentalListing: RequestHandler = async (
@@ -63,7 +46,7 @@ export const createRentalListing: RequestHandler = async (
 
 export const getRentalListing: RequestHandler = async (request, response) => {
   const listing = await withOwnedListing(
-    listingIdFromRequest(request),
+    resourceIdFromRequest(request, 'listingId'),
     request.auth?.userId as string,
     getListingDetails
   )
@@ -78,12 +61,7 @@ export const getRentalListingFeed: RequestHandler = async (
     request.auth?.userId,
     request.auth?.userId ? 10 : 2
   )
-  const result = await Promise.all(
-    listings.map(async (listing) => ({
-      ...listing,
-      images: await Promise.all(listing.images.map(listingImageResponse)),
-    }))
-  )
+  const result = await Promise.all(listings.map(listingFeedResponse))
   response.json(result)
 }
 
@@ -92,7 +70,7 @@ export const updateRentalListing: RequestHandler = async (
   response
 ) => {
   const listing = await updateRentalListingDetails(
-    listingIdFromRequest(request),
+    resourceIdFromRequest(request, 'listingId'),
     request.auth?.userId as string,
     request.body as ListingUpdateInput
   )
@@ -105,7 +83,7 @@ export const presignListingImage: RequestHandler = async (
 ) => {
   const { contentType } = request.body as { contentType: string }
   const result = await withOwnedListing(
-    listingIdFromRequest(request),
+    resourceIdFromRequest(request, 'listingId'),
     request.auth?.userId as string,
     async (client, listing) => {
       const upload = await createPresignedImageUpload(
@@ -127,7 +105,7 @@ export const presignListingImage: RequestHandler = async (
 
 export const uploadListingImage: RequestHandler = async (request, response) => {
   const image = await finalizeListingImage(
-    listingIdFromRequest(request),
+    resourceIdFromRequest(request, 'listingId'),
     request.auth?.userId as string,
     request.body as ImageUploadInput
   )
@@ -139,7 +117,7 @@ export const publishRentalListing: RequestHandler = async (
   response
 ) => {
   const listing = await withOwnedListing(
-    listingIdFromRequest(request),
+    resourceIdFromRequest(request, 'listingId'),
     request.auth?.userId as string,
     (client, listing) => publishListing(client, listing.id)
   )

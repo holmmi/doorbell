@@ -1,7 +1,7 @@
 import { Box, Divider, Typography } from '@mui/material'
 import { useTranslation } from 'react-i18next'
 import { brand, shadows } from '../../theme/tokens'
-import type { ListingRoom } from '../../types/listing'
+import type { Room } from '../../types/listing'
 
 export type ListingPreview = {
   neighborhood: string
@@ -9,7 +9,7 @@ export type ListingPreview = {
   availableFrom: string
   rent: number
   squareMeters: number
-  rooms: ListingRoom
+  rooms: Room
   extraCosts: string
   imageUrl?: string
 }

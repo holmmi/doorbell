@@ -1,12 +1,28 @@
-import { authenticatedClient, ApiError } from './client'
+import {
+  ApiError,
+  authenticatedClient,
+  getToken,
+  unauthenticatedClient,
+} from './client'
+import { toHomeListing } from '../types/listing'
 import type {
   CreatedListing,
+  HomeListing,
   ListingDetails,
   ListingImageInput,
+  ListingFeedItem,
   ListingInput,
   PresignedImageUpload,
   PublishedListing,
 } from '../types/listing'
+
+// The feed does not support filters or report a total yet, so callers filter
+// the returned page themselves.
+export const getFeed = async (): Promise<HomeListing[]> => {
+  const client = getToken() ? authenticatedClient : unauthenticatedClient
+  const listings = await client.request<ListingFeedItem[]>('/listing')
+  return listings.map(toHomeListing)
+}
 
 const listingPath = (listingId: string) =>
   `/listing/${encodeURIComponent(listingId)}`

@@ -15,6 +15,13 @@ export const requireRole = (role: UserRole): RequestHandler => {
     try {
       const currentRole = await findUserRoleById(userId)
 
+      if (currentRole === undefined) {
+        response
+          .status(401)
+          .json({ error: 'error.authentication.unauthorized' })
+        return
+      }
+
       if (currentRole !== role) {
         response.status(403).json({ error: 'error.authorization.forbidden' })
         return

@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { listingRooms } from '../types/listing'
+import { rooms } from '../types/listing'
 
 const amount = (max: number) =>
   z
@@ -22,7 +22,7 @@ export const listingFormSchema = z.object({
   availableFrom: z.iso.date('listing.validation.date'),
   rent: amount(99999999.99),
   squareMeters: amount(999999.99),
-  rooms: z.enum(listingRooms),
+  rooms: z.enum(rooms),
   extraCosts: z.string().optional(),
 })
 
