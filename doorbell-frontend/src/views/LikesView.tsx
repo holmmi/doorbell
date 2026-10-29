@@ -352,7 +352,7 @@ export const LikesView = () => {
   )
 }
 
-function Section({
+const Section = ({
   title,
   count,
   children,
@@ -360,7 +360,7 @@ function Section({
   title: string
   count: number
   children: ReactNode
-}) {
+}) => {
   return (
     <Box
       component="section"
@@ -377,7 +377,7 @@ function Section({
   )
 }
 
-function EmptySection({ children }: { children: ReactNode }) {
+const EmptySection = ({ children }: { children: ReactNode }) => {
   return (
     <Box
       sx={{
