@@ -92,7 +92,7 @@ const matches = async (tenantId = '2') => {
   const response = await apiRequest(
     tenantId,
     'GET',
-    '/listing-interaction/matches'
+    '/listing-interaction/tenant-matches'
   )
   assert.equal(response.status, 200)
   return (await response.json()) as MatchResponse[]
@@ -367,7 +367,7 @@ void describe(
             await apiRequest(
               '3',
               'GET',
-              '/listing-interaction/matches?tenantId=2'
+              '/listing-interaction/tenant-matches?tenantId=2'
             )
           ).json(),
           []
@@ -470,7 +470,7 @@ void describe(
           },
           {
             method: 'GET',
-            path: '/listing-interaction/matches',
+            path: '/listing-interaction/tenant-matches',
             body: undefined,
             wrongRole: '1',
           },

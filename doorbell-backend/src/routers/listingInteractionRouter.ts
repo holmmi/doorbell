@@ -20,7 +20,7 @@ const listingInteractionRouter = Router()
 const landlordOnly = [authenticate, requireRole('LANDLORD')]
 const tenantOnly = [authenticate, requireRole('TENANT')]
 
-listingInteractionRouter.get('/matches', tenantOnly, getMatches)
+listingInteractionRouter.get('/tenant-matches', tenantOnly, getMatches)
 listingInteractionRouter.get(
   '/applicants',
   landlordOnly,

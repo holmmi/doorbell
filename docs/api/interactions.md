@@ -142,7 +142,7 @@ Database failures roll back the entire operation so the request can be retried.
 
 ## Retrieve tenant matches
 
-`GET /api/listing-interaction/matches`
+`GET /api/listing-interaction/tenant-matches`
 
 ```json
 [
