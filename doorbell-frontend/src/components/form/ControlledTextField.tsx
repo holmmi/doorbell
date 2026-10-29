@@ -7,24 +7,27 @@ import {
 } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
 
-type AuthTextFieldProps<T extends FieldValues> = Omit<
-  TextFieldProps,
-  'label' | 'name'
-> & {
-  control: Control<T>
+type ControlledTextFieldProps<
+  T extends FieldValues,
+  TTransformed extends FieldValues = T,
+> = Omit<TextFieldProps, 'label' | 'name'> & {
+  control: Control<T, unknown, TTransformed>
   name: FieldPath<T>
   label: string
 }
 
-export function AuthTextField<T extends FieldValues>({
+export const ControlledTextField = <
+  T extends FieldValues,
+  TTransformed extends FieldValues = T,
+>({
   control,
   name,
   label,
   helperText,
   ...props
-}: AuthTextFieldProps<T>) {
+}: ControlledTextFieldProps<T, TTransformed>) => {
   const { t } = useTranslation()
-  const id = `auth-field-${String(name)}`
+  const id = `field-${String(name)}`
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>

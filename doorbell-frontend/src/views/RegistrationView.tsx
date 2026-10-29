@@ -4,7 +4,6 @@ import {
   Box,
   ButtonBase,
   Button,
-  SvgIcon,
   Stack,
   Typography,
 } from '@mui/material'
@@ -13,47 +12,34 @@ import { Controller, useForm } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router'
 import { ApiError } from '../api/client'
-import { userClient } from '../api/userClient'
 import { AuthPanel } from '../components/auth/AuthPanel'
-import { AuthTextField } from '../components/auth/AuthTextField'
+import { ControlledTextField } from '../components/form/ControlledTextField'
+import { HomeIcon, KeyIcon } from '../components/icons'
+import { useAuth } from '../hooks/useAuth'
 import {
   registrationSchema,
   type RegistrationFormValues,
 } from '../schemas/auth'
-import type { UserRole } from '../types/user'
 
 const roleOptions = [
-  { role: 'TENANT', title: 'auth.tenant', body: 'auth.tenantBody' },
-  { role: 'LANDLORD', title: 'auth.landlord', body: 'auth.landlordBody' },
+  {
+    role: 'TENANT',
+    title: 'auth.tenant',
+    body: 'auth.tenantBody',
+    Icon: HomeIcon,
+  },
+  {
+    role: 'LANDLORD',
+    title: 'auth.landlord',
+    body: 'auth.landlordBody',
+    Icon: KeyIcon,
+  },
 ] as const
 
-function RoleIcon({ role }: { role: UserRole }) {
-  return (
-    <SvgIcon
-      viewBox="0 0 24 24"
-      sx={{
-        fill: 'none',
-        stroke: 'currentColor',
-        strokeWidth: 2,
-        strokeLinecap: 'round',
-        strokeLinejoin: 'round',
-      }}
-    >
-      {role === 'TENANT' ? (
-        <path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8M3 10a2 2 0 0 1 .7-1.5l7-6a2 2 0 0 1 2.6 0l7 6A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z" />
-      ) : (
-        <>
-          <path d="M2.6 17.4A2 2 0 0 0 2 18.8V21a1 1 0 0 0 1 1h3a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h1a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h.2a2 2 0 0 0 1.4-.6l.8-.8a6.5 6.5 0 1 0-4-4Z" />
-          <circle cx="16.5" cy="7.5" r=".5" />
-        </>
-      )}
-    </SvgIcon>
-  )
-}
-
-export function RegistrationView() {
+export const RegistrationView = () => {
   const { t } = useTranslation()
   const navigate = useNavigate()
+  const { register } = useAuth()
   const [apiError, setApiError] = useState<string | null>(null)
   const {
     control,
@@ -73,8 +59,7 @@ export function RegistrationView() {
   const onSubmit = handleSubmit(async (values) => {
     setApiError(null)
     try {
-      await userClient.register(values)
-      await userClient.login({ email: values.email, password: values.password })
+      await register(values)
       void navigate('/')
     } catch (error) {
       setApiError(error instanceof ApiError ? error.code : 'error.network')
@@ -165,7 +150,7 @@ export function RegistrationView() {
                               justifyContent: 'center',
                             }}
                           >
-                            <RoleIcon role={option.role} />
+                            <option.Icon />
                           </Box>
                           <Typography sx={{ fontSize: 18, fontWeight: 700 }}>
                             {t(option.title)}
@@ -194,27 +179,27 @@ export function RegistrationView() {
                 gap: 2,
               }}
             >
-              <AuthTextField
+              <ControlledTextField
                 control={control}
                 name="firstName"
                 label={t('auth.firstName')}
                 autoComplete="given-name"
               />
-              <AuthTextField
+              <ControlledTextField
                 control={control}
                 name="lastName"
                 label={t('auth.lastName')}
                 autoComplete="family-name"
               />
             </Box>
-            <AuthTextField
+            <ControlledTextField
               control={control}
               name="email"
               label={t('auth.email')}
               type="email"
               autoComplete="email"
             />
-            <AuthTextField
+            <ControlledTextField
               control={control}
               name="password"
               label={t('auth.password')}

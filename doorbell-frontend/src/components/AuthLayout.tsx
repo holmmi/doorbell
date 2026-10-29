@@ -2,7 +2,7 @@ import { Box } from '@mui/material'
 import { Outlet } from 'react-router'
 import { DoorbellLogo } from './DoorbellLogo'
 
-export function AuthLayout() {
+export const AuthLayout = () => {
   return (
     <Box
       sx={{

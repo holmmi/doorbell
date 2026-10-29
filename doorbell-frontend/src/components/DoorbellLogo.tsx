@@ -2,7 +2,7 @@ import { Box, Typography } from '@mui/material'
 import { Link as RouterLink } from 'react-router'
 import { useTranslation } from 'react-i18next'
 
-export function DoorbellLogo() {
+export const DoorbellLogo = () => {
   const { t } = useTranslation()
 
   return (

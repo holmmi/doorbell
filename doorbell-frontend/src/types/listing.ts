@@ -13,6 +13,31 @@ export interface ListingFeedImage {
   imageUrl: string
 }
 
+export interface ListingInput {
+  neighborhood: string
+  city: string
+  availableFrom: string
+  rent: number
+  squareMeters: number
+  rooms: Room
+  extraCosts?: string
+}
+
+export interface CreatedListing {
+  id: string
+}
+
+export interface PresignedImageUpload {
+  objectKey: string
+  uploadUrl: string
+  expiresIn: number
+}
+
+export interface ListingImageInput {
+  objectKey: string
+  displayOrder: number
+}
+
 /** A listing as returned by `GET /api/listing`. */
 export interface ListingFeedItem {
   id: string
@@ -27,6 +52,16 @@ export interface ListingFeedItem {
   rooms: Room
   published: boolean
   images: ListingFeedImage[]
+}
+
+// GET/PUT /listing/:id response for the owner. `ready` means it has images.
+export interface ListingDetails extends ListingFeedItem {
+  ready: boolean
+}
+
+export interface PublishedListing {
+  id: string
+  published: boolean
 }
 
 export interface HomeListingImage {

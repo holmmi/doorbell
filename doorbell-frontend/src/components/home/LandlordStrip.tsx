@@ -1,12 +1,14 @@
 import { Box, Button, Typography } from '@mui/material'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router'
+import { useAuth } from '../../hooks/useAuth'
 import { BellRingIcon } from './icons'
 
 const bullets = ['free', 'interested', 'choose'] as const
 
-export function LandlordStrip() {
+export const LandlordStrip = () => {
   const { t } = useTranslation()
+  const { user } = useAuth()
 
   return (
     <Box
@@ -98,11 +100,11 @@ export function LandlordStrip() {
         </Box>
       </Box>
 
-      {/* RegistrationView cannot preselect a role yet, so this links to the
-          default form. */}
+      {/* Landlords go straight to the listing form. RegistrationView cannot
+          preselect a role yet, so everyone else gets the default form. */}
       <Button
         component={Link}
-        to="/registration"
+        to={user?.role === 'LANDLORD' ? '/listing/new' : '/registration'}
         sx={{
           flexShrink: 0,
           height: 62,

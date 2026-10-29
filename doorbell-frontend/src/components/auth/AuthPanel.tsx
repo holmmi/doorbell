@@ -11,12 +11,12 @@ type AuthPanelProps = {
   children: React.ReactNode
 }
 
-export function AuthPanel({
+export const AuthPanel = ({
   mode,
   title,
   description,
   children,
-}: AuthPanelProps) {
+}: AuthPanelProps) => {
   const { t } = useTranslation()
   const navigate = useNavigate()
 

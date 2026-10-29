@@ -12,9 +12,8 @@ import {
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router'
-import { ApiError, getToken } from '../api/client'
+import { ApiError } from '../api/client'
 import { getFeed } from '../api/listingClient'
-import { userClient } from '../api/userClient'
 import { EmptyDeck } from '../components/home/EmptyDeck'
 import { Faq } from '../components/home/Faq'
 import { FilterBar } from '../components/home/FilterBar'
@@ -23,11 +22,9 @@ import { BellRingIcon } from '../components/home/icons'
 import { LandlordStrip } from '../components/home/LandlordStrip'
 import { SwipeDeck } from '../components/home/SwipeDeck'
 import { Testimonials } from '../components/home/Testimonials'
+import { useAuth } from '../hooks/useAuth'
 import { toIsoDate } from '../utils/format'
 import type { FeedFilters, HomeListing } from '../types/listing'
-import type { UserRole } from '../types/user'
-
-type Viewer = UserRole | 'ANONYMOUS' | 'LOADING'
 
 const noFilters: FeedFilters = {
   city: '',
@@ -50,36 +47,17 @@ const matchesFilters = (listing: HomeListing, filters: FeedFilters) =>
   (!filters.maxPrice || listing.monthlyPrice <= filters.maxPrice) &&
   (!filters.minSize || listing.squareMeters >= filters.minSize)
 
-export function HomeView() {
+export const HomeView = () => {
   const { t } = useTranslation()
+  const { user, status } = useAuth()
+  const viewer = status === 'loading' ? 'LOADING' : (user?.role ?? 'ANONYMOUS')
   const [today] = useState(() => toIsoDate(new Date()))
-  const [viewer, setViewer] = useState<Viewer>(() =>
-    getToken() ? 'LOADING' : 'ANONYMOUS'
-  )
   const [listings, setListings] = useState<HomeListing[] | null>(null)
   const [decided, setDecided] = useState<ReadonlySet<string>>(() => new Set())
   const [filters, setFilters] = useState<FeedFilters>(noFilters)
   const [likeNotice, setLikeNotice] = useState(false)
   const [signUpOpen, setSignUpOpen] = useState(false)
   const [errorCode, setErrorCode] = useState<string | null>(null)
-
-  useEffect(() => {
-    if (!getToken()) return
-    let ignore = false
-    userClient
-      .getCurrentUser()
-      .then((user) => {
-        if (!ignore) setViewer(user.role)
-      })
-      .catch((error: unknown) => {
-        if (ignore) return
-        setViewer('ANONYMOUS')
-        setErrorCode(errorCodeOf(error))
-      })
-    return () => {
-      ignore = true
-    }
-  }, [])
 
   useEffect(() => {
     let ignore = false

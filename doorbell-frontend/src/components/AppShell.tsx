@@ -2,23 +2,26 @@ import { AppBar, Box, Container, Toolbar, Typography } from '@mui/material'
 import { useTheme } from '@mui/material/styles'
 import { NavLink, Outlet } from 'react-router'
 import { useTranslation } from 'react-i18next'
-import { getToken } from '../api/client'
+import { useAuth } from '../hooks/useAuth'
+import type { UserRole } from '../types/user'
 import { DoorbellLogo } from './DoorbellLogo'
 import { Footer } from './Footer'
 import { LoginNavLink } from './LoginNavLink'
 import { MatchesBadge } from './MatchesBadge'
 import { ProfileAvatar } from './ProfileAvatar'
 
+// `role` limits an item to one account type; signed-out users only see Home.
 const navItems = [
   { key: 'home', to: '/' },
-  { key: 'matches', to: '/matches' },
+  { key: 'matches', to: '/matches', role: 'TENANT' },
   { key: 'profile', to: '/profile' },
-] as const
+] as const satisfies { key: string; to: string; role?: UserRole }[]
 
-export function AppShell() {
+export const AppShell = () => {
   const { t } = useTranslation()
   const theme = useTheme()
-  const isLoggedIn = Boolean(getToken())
+  const { user, status } = useAuth()
+  const isLoggedIn = status === 'authenticated'
 
   return (
     <Box
@@ -68,7 +71,11 @@ export function AppShell() {
             }}
           >
             {navItems
-              .filter((item) => isLoggedIn || item.key === 'home')
+              .filter((item) =>
+                user
+                  ? !('role' in item) || item.role === user.role
+                  : item.key === 'home'
+              )
               .map((item) => (
                 <NavLink
                   key={item.key}
@@ -100,7 +107,7 @@ export function AppShell() {
                 </NavLink>
               ))}
 
-            {!isLoggedIn ? <LoginNavLink /> : null}
+            {status === 'anonymous' ? <LoginNavLink /> : null}
             {isLoggedIn ? (
               <Box
                 sx={{
