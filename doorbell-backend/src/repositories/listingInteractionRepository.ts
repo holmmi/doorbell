@@ -95,26 +95,28 @@ export const findPendingApplicants = async (
   return result.rows
 }
 
+interface PendingApplicantQueryRow {
+  tenantId: string
+  firstName: string
+  lastName: string
+  listingId: string
+  monthlyPrice: string
+  squareMeters: string
+  neighborhood: string
+  city: string
+  availableFrom: string
+  extraCosts: string
+  rooms: PendingApplicantRow['listing']['rooms']
+  published: boolean
+  imageId: string | null
+  imagePath: string | null
+  displayOrder: number | null
+}
+
 export const findPendingApplicantsForLandlord = async (
   landlordId: string
 ): Promise<PendingApplicantRow[]> => {
-  const result = await pool.query<{
-    tenantId: string
-    firstName: string
-    lastName: string
-    listingId: string
-    monthlyPrice: string
-    squareMeters: string
-    neighborhood: string
-    city: string
-    availableFrom: string
-    extraCosts: string
-    rooms: PendingApplicantRow['listing']['rooms']
-    published: boolean
-    imageId: string | null
-    imagePath: string | null
-    displayOrder: number | null
-  }>(
+  const result = await pool.query<PendingApplicantQueryRow>(
     `SELECT tenant.id AS "tenantId", tenant.first_name AS "firstName",
             tenant.last_name AS "lastName",
             listing.id AS "listingId",
