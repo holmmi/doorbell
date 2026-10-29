@@ -74,6 +74,9 @@ export const createApplicantDecision: RequestHandler = async (
   )
 }
 
-export const getMatches: RequestHandler = async (request, response) => {
+export const getMatchesForTenant: RequestHandler = async (
+  request,
+  response
+) => {
   response.json(await getTenantMatches(request.auth?.userId as string))
 }

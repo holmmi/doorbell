@@ -6,7 +6,7 @@ import {
   getListingApplicants,
   getApplicantsForLandlord,
   getMatchesForLandlord,
-  getMatches,
+  getMatchesForTenant,
 } from '../controllers/listingInteractionController.js'
 import { authenticate } from '../middlewares/authenticate.js'
 import { requireRole } from '../middlewares/requireRole.js'
@@ -20,7 +20,7 @@ const listingInteractionRouter = Router()
 const landlordOnly = [authenticate, requireRole('LANDLORD')]
 const tenantOnly = [authenticate, requireRole('TENANT')]
 
-listingInteractionRouter.get('/tenant-matches', tenantOnly, getMatches)
+listingInteractionRouter.get('/tenant-matches', tenantOnly, getMatchesForTenant)
 listingInteractionRouter.get(
   '/applicants',
   landlordOnly,
