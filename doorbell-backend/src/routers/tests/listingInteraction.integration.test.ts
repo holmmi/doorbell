@@ -60,6 +60,34 @@ const applicants = async (listingId = '1') => {
   assert.equal(response.status, 200)
   return (await response.json()) as Applicant[]
 }
+const landlordApplicants = async (landlordId = '1') => {
+  const response = await apiRequest(
+    landlordId,
+    'GET',
+    '/listing-interaction/applicants'
+  )
+  assert.equal(response.status, 200)
+  return (await response.json()) as {
+    tenantId: string
+    listing: { id: string; images: { imageUrl: string }[] }
+  }[]
+}
+const landlordMatches = async (landlordId = '1') => {
+  const response = await apiRequest(
+    landlordId,
+    'GET',
+    '/listing-interaction/landlord-matches'
+  )
+  assert.equal(response.status, 200)
+  return (await response.json()) as {
+    tenantId: string
+    firstName: string
+    lastName: string
+    email: string
+    phone: string | null
+    listing: { id: string; neighborhood: string; city: string }
+  }[]
+}
 const matches = async (tenantId = '2') => {
   const response = await apiRequest(
     tenantId,
@@ -187,6 +215,7 @@ void describe(
           tenantId: '3',
           decision: 'ACCEPTED',
         })
+
         assert.equal((await decision('3', 'DECLINED')).status, 409)
         assert.deepEqual(await applicants(), [])
         assert.deepEqual(await matches('2'), [])
@@ -200,6 +229,47 @@ void describe(
           await (await apiRequest('2', 'GET', '/listing')).json(),
           []
         )
+      })
+
+      void test('landlord-wide applicants include pending likes from owned listings', async () => {
+        await seedPublishedListing(1, 'listings/2/second.png')
+        await preference('2', true, '1')
+        await preference('3', true, '2')
+        await preference('4', false, '1')
+
+        const result = await landlordApplicants()
+        assert.deepEqual(
+          result.map(({ tenantId, listing }) => ({
+            tenantId,
+            listingId: listing.id,
+            imageCount: listing.images.length,
+          })),
+          [
+            { tenantId: '2', listingId: '1', imageCount: 1 },
+            { tenantId: '3', listingId: '2', imageCount: 1 },
+          ]
+        )
+        assert.match(result[0].listing.images[0].imageUrl, /^https?:\/\//)
+      })
+
+      void test('landlord matches return accepted tenants without apartment images', async () => {
+        await preference('2')
+        assert.deepEqual(await landlordMatches(), [])
+        await decision('2')
+        assert.deepEqual(await landlordMatches(), [
+          {
+            tenantId: '2',
+            firstName: 'Ada',
+            lastName: 'Tenant',
+            email: 'ada@example.com',
+            phone: null,
+            listing: {
+              id: '1',
+              neighborhood: 'Kallio',
+              city: 'Helsinki',
+            },
+          },
+        ])
       })
 
       void test('accepting multiple applicants preserves publication and other pending likes', async () => {
@@ -377,6 +447,18 @@ void describe(
           {
             method: 'GET',
             path: '/listing-interaction/1/applicants',
+            body: undefined,
+            wrongRole: '2',
+          },
+          {
+            method: 'GET',
+            path: '/listing-interaction/applicants',
+            body: undefined,
+            wrongRole: '2',
+          },
+          {
+            method: 'GET',
+            path: '/listing-interaction/landlord-matches',
             body: undefined,
             wrongRole: '2',
           },
