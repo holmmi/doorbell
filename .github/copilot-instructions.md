@@ -112,9 +112,6 @@ middleware using an isolated Express app.
 route with isolated test environment variables and a stubbed PostgreSQL
 `pool.query`. It loads database configuration but never connects to PostgreSQL,
 so that test file requires no running database.
-`src/routers/tests/listingAccess.test.ts` exercises listing read access and
-draft privacy with stubbed PostgreSQL queries and transaction clients. It
-also runs without a database or object storage service.
 
 `src/routers/tests/listing.integration.test.ts` and
 `src/routers/tests/listingInteraction.integration.test.ts` run with the other backend
@@ -125,8 +122,8 @@ disposable PostgreSQL 18.6 and Adobe S3Mock 5.2.3 containers on random ports.
 Their shared `src/routers/tests/helpers/integration.ts` fixture applies the
 migration SQL files directly, configures the backend before importing it, and
 cleans up containers even after setup/test failures. The suites cover listing
-creation, retrieval, updates, image uploads, publication, background cleanup,
-preferences, applicants and matches.
+creation, public reads, draft privacy, updates, image uploads, publication,
+background cleanup, preferences, applicants and matches.
 Test-only triggers exercise deferred constraint rollback and, with
 `pg_blocking_pids`, coordinate concurrent HTTP updates without fixed sleeps.
 Each integration suite sets `concurrency: false` so tests sharing its containers
