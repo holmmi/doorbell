@@ -2,52 +2,77 @@ import {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
+  useSyncExternalStore,
   type ReactNode,
 } from 'react'
-import { ApiError, getToken } from '../api/client'
+import { useNavigate } from 'react-router'
+import { ApiError, getToken, subscribeToToken } from '../api/client'
 import * as userClient from '../api/userClient'
 import { AuthContext, type AuthStatus } from '../hooks/useAuth'
 import type { LoginInput, RegistrationInput, UserInfo } from '../types/user'
 
+type AuthState = {
+  token: string | null
+  user: UserInfo | null
+  status: AuthStatus
+}
+
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
-  const [user, setUser] = useState<UserInfo | null>(null)
-  const [status, setStatus] = useState<AuthStatus>(() =>
-    getToken() ? 'loading' : 'anonymous'
-  )
+  const token = useSyncExternalStore(subscribeToToken, getToken)
+  const navigate = useNavigate()
+  const navigateRef = useRef(navigate)
+  const [revision, setRevision] = useState(0)
+  const [state, setState] = useState<AuthState>(() => ({
+    token,
+    user: null,
+    status: token ? 'loading' : 'anonymous',
+  }))
+  // Never expose a previous account while the next current-user request is pending.
+  const user = state.token === token ? state.user : null
+  const status =
+    state.token === token ? state.status : token ? 'loading' : 'anonymous'
 
   useEffect(() => {
-    if (!getToken()) return
+    navigateRef.current = navigate
+  }, [navigate])
+
+  const logout = useCallback(() => {
+    userClient.logout()
+    setState({ token: null, user: null, status: 'anonymous' })
+  }, [])
+
+  const expire = useCallback(() => {
+    logout()
+    void navigateRef.current('/login', { replace: true })
+  }, [logout])
+
+  useEffect(() => {
+    if (!token) return
     let active = true
-
-    userClient
-      .getCurrentUser()
-      .then((currentUser) => {
-        if (!active) return
-        setUser(currentUser)
-        setStatus('authenticated')
-      })
-      .catch((error: unknown) => {
-        if (!active) return
-        // Keep the token on network errors so a reload can recover.
-        if (error instanceof ApiError && error.status === 401) {
-          userClient.logout()
+    void userClient.getCurrentUser().then(
+      (currentUser) => {
+        if (active && getToken() === token) {
+          setState({ token, user: currentUser, status: 'authenticated' })
         }
-        setStatus('anonymous')
-      })
-
+      },
+      (error: unknown) => {
+        if (!active || getToken() !== token) return
+        if (error instanceof ApiError && error.status === 401) {
+          expire()
+        } else {
+          setState({ token, user: null, status: 'error' })
+        }
+      }
+    )
     return () => {
       active = false
     }
-  }, [])
+  }, [token, revision, expire])
 
-  const login = useCallback(async (input: LoginInput) => {
-    const currentUser = await userClient.login(input)
-    setUser(currentUser)
-    setStatus('authenticated')
-    return currentUser
-  }, [])
-
+  // Token notifications resolve the current account for both login and other tabs.
+  const login = useCallback((input: LoginInput) => userClient.login(input), [])
   const register = useCallback(
     async (input: RegistrationInput) => {
       await userClient.register(input)
@@ -55,17 +80,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     },
     [login]
   )
-
-  const logout = useCallback(() => {
-    userClient.logout()
-    setUser(null)
-    setStatus('anonymous')
+  const retry = useCallback(() => {
+    setState({ token: getToken(), user: null, status: 'loading' })
+    setRevision((value) => value + 1)
   }, [])
 
   const value = useMemo(
-    () => ({ user, status, login, register, logout }),
-    [user, status, login, register, logout]
+    () => ({ token, user, status, login, register, logout, expire, retry }),
+    [token, user, status, login, register, logout, expire, retry]
   )
-
   return <AuthContext value={value}>{children}</AuthContext>
 }

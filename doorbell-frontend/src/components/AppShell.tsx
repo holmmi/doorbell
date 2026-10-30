@@ -3,6 +3,7 @@ import { useTheme } from '@mui/material/styles'
 import { NavLink, Outlet } from 'react-router'
 import { useTranslation } from 'react-i18next'
 import { useAuth } from '../hooks/useAuth'
+import { useMatches } from '../state/matchesContext'
 import type { UserRole } from '../types/user'
 import { DoorbellLogo } from './DoorbellLogo'
 import { Footer } from './Footer'
@@ -21,6 +22,7 @@ export const AppShell = () => {
   const { t } = useTranslation()
   const theme = useTheme()
   const { user, status } = useAuth()
+  const { matches, forbidden } = useMatches()
   const isLoggedIn = status === 'authenticated'
 
   return (
@@ -71,6 +73,7 @@ export const AppShell = () => {
             }}
           >
             {navItems
+              .filter((item) => item.key !== 'matches' || !forbidden)
               .filter((item) =>
                 user
                   ? !('role' in item) || item.role === user.role
@@ -103,7 +106,9 @@ export const AppShell = () => {
                     {t(`nav.${item.key}`)}
                   </Typography>
 
-                  {item.key === 'matches' ? <MatchesBadge count={3} /> : null}
+                  {item.key === 'matches' && matches ? (
+                    <MatchesBadge count={matches.length} />
+                  ) : null}
                 </NavLink>
               ))}
 

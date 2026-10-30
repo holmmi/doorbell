@@ -1,13 +1,17 @@
 import { Box, Typography } from '@mui/material'
+import { useTranslation } from 'react-i18next'
 
 type MatchesBadgeProps = {
   count: number
 }
 
 export const MatchesBadge = ({ count }: MatchesBadgeProps) => {
+  const { t } = useTranslation()
+  if (count === 0) return null
   return (
     <Box
       component="span"
+      aria-label={t('matches.count', { count })}
       sx={{
         display: 'inline-flex',
         alignItems: 'center',

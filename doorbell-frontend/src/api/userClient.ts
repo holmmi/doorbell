@@ -5,8 +5,10 @@ import type {
   UserInfo,
 } from '../types/user'
 import {
+  ApiError,
   authenticatedClient,
   clearToken,
+  getToken,
   setToken,
   unauthenticatedClient,
 } from './client'
@@ -29,9 +31,13 @@ export const login = async (input: LoginInput): Promise<UserInfo> => {
   setToken(token)
 
   try {
-    return await getCurrentUser()
+    const user = await getCurrentUser()
+    if (getToken() !== token) {
+      throw new ApiError(401, 'error.authentication.unauthorized')
+    }
+    return user
   } catch (error) {
-    clearToken()
+    if (getToken() === token) clearToken()
     throw error
   }
 }

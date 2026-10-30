@@ -10,6 +10,12 @@ repository uses npm workspaces:
   routes; `/login` and `/registration` render outside `AppShell`. Auth forms use
   React Hook Form with Zod via `@hookform/resolvers`; reusable JSON API clients
   and user auth methods live under `src/api/`.
+- `src/auth/AuthProvider.tsx` resolves the current account when credentials
+  change, including changes in another tab. `src/state/MatchesProvider.tsx`
+  shares tenant matches between `/matches` and its navigation badge, resets
+  data on account changes, and fetches `/api/listing-interaction/matches`.
+  The Matches view handles its own authentication, tenant-only, and retry
+  states; the other protected views use `ProtectedRoute`.
 - `doorbell-backend/`: Express server. `src/app.ts` creates and exports the app;
   `src/index.ts` starts it on port 8001.
 - Backend user routes live in `src/routers/userRouter.ts` under `/api/user`.
