@@ -122,8 +122,8 @@ disposable PostgreSQL 18.6 and Adobe S3Mock 5.2.3 containers on random ports.
 Their shared `src/routers/tests/helpers/integration.ts` fixture applies the
 migration SQL files directly, configures the backend before importing it, and
 cleans up containers even after setup/test failures. The suites cover listing
-creation, retrieval, updates, image uploads, publication, background cleanup,
-preferences, applicants and matches.
+creation, public reads, draft privacy, updates, image uploads, publication,
+background cleanup, preferences, applicants and matches.
 Test-only triggers exercise deferred constraint rollback and, with
 `pg_blocking_pids`, coordinate concurrent HTTP updates without fixed sleeps.
 Each integration suite sets `concurrency: false` so tests sharing its containers
@@ -196,8 +196,10 @@ Both runtime images include `curl` for future healthchecks.
   JPEG uploads are supported by the current image service. Publication requires
   at least one image to be finalized successfully.
 - Listing updates use complete basic details and an optional complete `images`
-  set. Omitting `images` preserves it; an empty set unpublishes. The owner GET
-  and PUT responses include sorted images and computed readiness. See
+  set. Omitting `images` preserves it; an empty set unpublishes. The listing GET
+  and PUT responses include sorted images and computed readiness. Published
+  listings can be read by anyone; unpublished listings require their current
+  landlord owner. Writes remain restricted to the current landlord owner. See
   `docs/api/listings.md` for the API contract and request examples.
 - All listing mutations lock the parent row in a transaction. Migration V3
   makes image order uniqueness deferrable for safe swaps, records issued uploads

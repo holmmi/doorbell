@@ -3,7 +3,6 @@ import type { RequestHandler } from 'express'
 import {
   createListing,
   findListingFeed,
-  getListingDetails,
   publishListing,
   registerListingImageUpload,
   withOwnedListing,
@@ -15,6 +14,7 @@ import {
 } from '../mappers/listingResponse.js'
 import {
   finalizeListingImage,
+  getRentalListingDetails,
   updateRentalListingDetails,
 } from '../services/listingService.js'
 import type {
@@ -45,10 +45,9 @@ export const createRentalListing: RequestHandler = async (
 }
 
 export const getRentalListing: RequestHandler = async (request, response) => {
-  const listing = await withOwnedListing(
+  const listing = await getRentalListingDetails(
     resourceIdFromRequest(request, 'listingId'),
-    request.auth?.userId as string,
-    getListingDetails
+    request.auth?.userId
   )
   response.json(await listingResponse(listing))
 }

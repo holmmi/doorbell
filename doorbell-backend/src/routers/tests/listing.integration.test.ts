@@ -2,12 +2,14 @@ import assert from 'node:assert/strict'
 import { beforeEach, describe, test } from 'node:test'
 import { setTimeout as delay } from 'node:timers/promises'
 import { GetObjectCommand, S3ServiceException } from '@aws-sdk/client-s3'
+import type { PoolClient } from 'pg'
 import type {
   ListingDetails,
   ListingDetailsResponse,
   ListingImageResponse,
 } from '../../types/listing.js'
 import {
+  baseUrl,
   bucket,
   imageBytes,
   listingInput,
@@ -169,6 +171,201 @@ void describe(
           [{ id: image.id, displayOrder: image.displayOrder }]
         )
       })
+    })
+
+    void describe('listing access', () => {
+      let images: ListingDetails['images']
+      const createdAt = '2026-10-28'
+
+      beforeEach(async () => {
+        await pool.query(`
+          INSERT INTO "user" (first_name, last_name, email, password, role)
+          VALUES
+            ('Tenant', 'Two', 'tenant@example.com', 'unused', 'TENANT'),
+            ('Owner', 'Three', 'other-owner@example.com', 'unused', 'LANDLORD')
+        `)
+        await createListing()
+        await pool.query(
+          'UPDATE rental_listing SET created_at = $1 WHERE id = $2',
+          [createdAt, '1']
+        )
+        // Insert out of order to verify that public reads preserve display order.
+        await addImage(2)
+        await addImage(1)
+        images = (
+          await pool.query<ListingDetails['images'][number]>(
+            `SELECT id, image_path AS "imagePath", display_order AS "displayOrder"
+             FROM rental_listing_image
+             WHERE rental_listing_id = $1
+             ORDER BY display_order`,
+            ['1']
+          )
+        ).rows
+      })
+
+      const getListing = async (userId?: string) => {
+        if (userId === undefined) return publicRequest('GET', '/1')
+        const { createAccessToken } = await import('../../utils/jwt.js')
+        return requestAs(createAccessToken(userId), 'GET', '/1')
+      }
+
+      for (const [description, userId] of [
+        ['anonymous visitor', undefined],
+        ['tenant', '2'],
+        ['another landlord', '3'],
+        ['owner', '1'],
+      ] as const) {
+        void test(`published listing is readable by ${description}`, async () => {
+          assert.equal((await request('POST', '/1/publish')).status, 200)
+
+          const response = await getListing(userId)
+          assert.equal(response.status, 200)
+          const body = (await response.json()) as ListingDetailsResponse
+          assert.deepEqual(body, {
+            id: '1',
+            ownerId: '1',
+            createdAt,
+            monthlyPrice: '1250.00',
+            squareMeters: '42.50',
+            neighborhood: listingInput.neighborhood,
+            city: listingInput.city,
+            availableFrom: listingInput.availableFrom,
+            extraCosts: '',
+            rooms: listingInput.rooms,
+            published: true,
+            ready: true,
+            images: images.map(({ id, displayOrder }, index) => ({
+              id,
+              displayOrder,
+              imageUrl: body.images[index].imageUrl,
+            })),
+          })
+          for (const [index, image] of body.images.entries()) {
+            const url = new URL(image.imageUrl)
+            assert.equal(url.searchParams.get('X-Amz-Expires'), '900')
+            assert.ok(url.pathname.endsWith(`/${images[index].imagePath}`))
+            const download = await fetch(url, {
+              signal: AbortSignal.timeout(15_000),
+            })
+            assert.equal(download.status, 200)
+            assert.deepEqual(
+              Buffer.from(await download.arrayBuffer()),
+              imageBytes
+            )
+          }
+        })
+      }
+
+      void test('unpublished listing is readable by its landlord owner with one available connection', async () => {
+        const reserved: PoolClient[] = []
+        try {
+          // Leave only the transaction connection available. A role lookup that
+          // incorrectly uses pool.query would wait for another connection.
+          for (let index = 1; index < (pool.options.max ?? 10); index += 1) {
+            reserved.push(await pool.connect())
+          }
+          const response = await getListing('1')
+          assert.equal(response.status, 200)
+          const body = (await response.json()) as ListingDetailsResponse
+          assert.equal(body.published, false)
+          assert.equal(body.ready, true)
+          assert.deepEqual(
+            body.images.map(({ id, displayOrder }) => ({ id, displayOrder })),
+            images.map(({ id, displayOrder }) => ({ id, displayOrder }))
+          )
+        } finally {
+          for (const client of reserved) client.release()
+        }
+      })
+
+      for (const [description, userId] of [
+        ['anonymous visitor', undefined],
+        ['tenant', '2'],
+        ['another landlord', '3'],
+      ] as const) {
+        void test(`unpublished listing is hidden from ${description}`, async () => {
+          const response = await getListing(userId)
+          assert.equal(response.status, 404)
+          assert.deepEqual(await response.json(), {
+            error: 'error.listing.notFound',
+          })
+        })
+      }
+
+      void test("draft access requires the owner's current landlord role", async () => {
+        // Keep the token issued while the account was still a landlord.
+        const { createAccessToken } = await import('../../utils/jwt.js')
+        const ownerToken = createAccessToken('1')
+        await pool.query('UPDATE "user" SET role = \'TENANT\' WHERE id = 1')
+
+        const response = await requestAs(ownerToken, 'GET', '/1')
+        assert.equal(response.status, 404)
+        assert.deepEqual(await response.json(), {
+          error: 'error.listing.notFound',
+        })
+      })
+
+      void test('a deleted owner cannot read its former draft with a stale token', async () => {
+        const { createAccessToken } = await import('../../utils/jwt.js')
+        const ownerToken = createAccessToken('1')
+        // The foreign key also removes the draft when its owner is deleted.
+        await pool.query('DELETE FROM "user" WHERE id = 1')
+
+        const response = await requestAs(ownerToken, 'GET', '/1')
+        assert.equal(response.status, 404)
+        assert.deepEqual(await response.json(), {
+          error: 'error.listing.notFound',
+        })
+      })
+
+      void test('missing listing returns 404', async () => {
+        const response = await publicRequest('GET', '/999')
+        assert.equal(response.status, 404)
+        assert.deepEqual(await response.json(), {
+          error: 'error.listing.notFound',
+        })
+      })
+
+      void test('invalid bearer token cannot read a published listing', async () => {
+        assert.equal((await request('POST', '/1/publish')).status, 200)
+
+        const response = await requestAs('invalid-token', 'GET', '/1')
+        assert.equal(response.status, 401)
+        assert.deepEqual(await response.json(), {
+          error: 'error.authentication.unauthorized',
+        })
+      })
+
+      void test('invalid listing ID returns 400', async () => {
+        const response = await publicRequest('GET', '/not-an-id')
+        assert.equal(response.status, 400)
+      })
+
+      for (const [description, userId, status] of [
+        ['anonymous visitor', undefined, 401],
+        ['tenant', '2', 403],
+      ] as const) {
+        void test(`public reads do not allow ${description} to update a listing`, async () => {
+          assert.equal((await request('POST', '/1/publish')).status, 200)
+          assert.equal((await getListing(userId)).status, 200)
+          const original = await readListing()
+          const { createAccessToken } = await import('../../utils/jwt.js')
+
+          const response = await fetch(`${baseUrl}/1`, {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json',
+              ...(userId === undefined
+                ? {}
+                : { Authorization: `Bearer ${createAccessToken(userId)}` }),
+            },
+            body: JSON.stringify({ ...listingInput, neighborhood: 'Kamppi' }),
+            signal: AbortSignal.timeout(15_000),
+          })
+          assert.equal(response.status, status)
+          assertListingUnchanged(await readListing(), original)
+        })
+      }
     })
 
     void describe('uploads', () => {
