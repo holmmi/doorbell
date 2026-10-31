@@ -3,7 +3,7 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { MatchedListing } from '../../types/match'
 
-export function ListingSummary({ listing }: { listing: MatchedListing }) {
+export const ListingSummary = ({ listing }: { listing: MatchedListing }) => {
   const { t, i18n } = useTranslation()
   const locale = i18n.resolvedLanguage
   const price = new Intl.NumberFormat(locale, {

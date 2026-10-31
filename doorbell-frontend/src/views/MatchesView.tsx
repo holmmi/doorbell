@@ -8,47 +8,12 @@ import {
 } from '@mui/material'
 import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Link as RouterLink, Navigate } from 'react-router'
+import { Link as RouterLink } from 'react-router'
 import { MatchCard } from '../components/matches/MatchCard'
 import { MatchDetailsDialog } from '../components/matches/MatchDetailsDialog'
-import { useMatches } from '../state/matchesContext'
-import { useAuth } from '../hooks/useAuth'
+import { useMatches } from '../hooks/useMatches'
 
-export function MatchesView() {
-  const { t } = useTranslation()
-  const { status, user, retry } = useAuth()
-  const { forbidden } = useMatches()
-  if (status === 'anonymous') return <Navigate to="/login" replace />
-  if (status === 'loading') return <LoadingState />
-  if (status === 'error') {
-    return (
-      <Box sx={{ py: 6 }}>
-        <Alert
-          severity="error"
-          action={<Button onClick={retry}>{t('matches.retry')}</Button>}
-        >
-          {t('matches.sessionError')}
-        </Alert>
-      </Box>
-    )
-  }
-  if (user?.role !== 'TENANT' || forbidden) {
-    return (
-      <Stack spacing={2} sx={{ py: 8, alignItems: 'flex-start' }}>
-        <Typography variant="h1" sx={{ fontSize: { xs: 32, md: 48 } }}>
-          {t('matches.title')}
-        </Typography>
-        <Typography>{t('matches.tenantOnly')}</Typography>
-        <Button component={RouterLink} to="/" variant="outlined">
-          {t('matches.home')}
-        </Button>
-      </Stack>
-    )
-  }
-  return <MatchesContent />
-}
-
-function LoadingState() {
+const LoadingState = () => {
   const { t } = useTranslation()
   return (
     <Box
@@ -67,9 +32,9 @@ function LoadingState() {
   )
 }
 
-function MatchesContent() {
+export const MatchesView = () => {
   const { t } = useTranslation()
-  const { matches, loading, error, refresh } = useMatches()
+  const { matches, loading, error, forbidden, refresh } = useMatches()
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const refreshButtonRef = useRef<HTMLButtonElement>(null)
   const selected =
@@ -80,6 +45,20 @@ function MatchesContent() {
   useEffect(() => {
     void refresh()
   }, [refresh])
+
+  if (forbidden) {
+    return (
+      <Stack spacing={2} sx={{ py: 8, alignItems: 'flex-start' }}>
+        <Typography variant="h1" sx={{ fontSize: { xs: 32, md: 48 } }}>
+          {t('matches.title')}
+        </Typography>
+        <Typography>{t('matches.tenantOnly')}</Typography>
+        <Button component={RouterLink} to="/" variant="outlined">
+          {t('matches.home')}
+        </Button>
+      </Stack>
+    )
+  }
 
   return (
     <Box

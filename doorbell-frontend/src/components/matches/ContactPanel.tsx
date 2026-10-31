@@ -2,7 +2,7 @@ import { Avatar, Box, Link, Typography } from '@mui/material'
 import { useTranslation } from 'react-i18next'
 import type { LandlordContact } from '../../types/match'
 
-export function ContactPanel({ landlord }: { landlord: LandlordContact }) {
+export const ContactPanel = ({ landlord }: { landlord: LandlordContact }) => {
   const { t } = useTranslation()
   const name = `${landlord.firstName} ${landlord.lastName}`
   return (

@@ -3,13 +3,13 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { ListingImage } from '../../types/match'
 
-export function ListingPhoto({
+export const ListingPhoto = ({
   image,
   alt,
 }: {
   image?: ListingImage
   alt: string
-}) {
+}) => {
   return (
     <PhotoSource
       key={image?.imageUrl ?? 'missing'}
@@ -19,7 +19,7 @@ export function ListingPhoto({
   )
 }
 
-function PhotoSource({ src, alt }: { src?: string; alt: string }) {
+const PhotoSource = ({ src, alt }: { src?: string; alt: string }) => {
   const { t } = useTranslation()
   const [failed, setFailed] = useState(false)
   return (

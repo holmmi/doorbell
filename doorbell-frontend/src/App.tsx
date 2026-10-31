@@ -42,28 +42,29 @@ const App = () => {
       <CssBaseline />
       <BrowserRouter>
         <AuthProvider>
-          <Routes>
-            <Route element={<AuthLayout />}>
-              <Route path="/login" element={page(LoginView)} />
-              <Route path="/registration" element={page(RegistrationView)} />
-            </Route>
-            <Route
-              element={
-                <MatchesProvider>
-                  <AppShell />
-                </MatchesProvider>
-              }
-            >
-              <Route path="/" element={page(HomeView)} />
-              <Route element={<ProtectedRoute />}>
-                <Route path="/profile" element={page(ProfileView)} />
+          <MatchesProvider>
+            <Routes>
+              <Route element={<AuthLayout />}>
+                <Route path="/login" element={page(LoginView)} />
+                <Route path="/registration" element={page(RegistrationView)} />
               </Route>
-              <Route path="/matches" element={page(MatchesView)} />
-              <Route element={<ProtectedRoute role="LANDLORD" />}>
-                <Route path="/listing/new" element={page(CreateListingView)} />
+              <Route element={<AppShell />}>
+                <Route path="/" element={page(HomeView)} />
+                <Route element={<ProtectedRoute />}>
+                  <Route path="/profile" element={page(ProfileView)} />
+                </Route>
+                <Route element={<ProtectedRoute role="TENANT" />}>
+                  <Route path="/matches" element={page(MatchesView)} />
+                </Route>
+                <Route element={<ProtectedRoute role="LANDLORD" />}>
+                  <Route
+                    path="/listing/new"
+                    element={page(CreateListingView)}
+                  />
+                </Route>
               </Route>
-            </Route>
-          </Routes>
+            </Routes>
+          </MatchesProvider>
         </AuthProvider>
       </BrowserRouter>
     </ThemeProvider>

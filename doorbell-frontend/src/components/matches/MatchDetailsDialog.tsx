@@ -20,7 +20,20 @@ import { ContactPanel } from './ContactPanel'
 import { ListingPhoto } from './ListingPhoto'
 import { ListingSummary } from './ListingSummary'
 
-export function MatchDetailsDialog({
+const galleryArrowStyle = {
+  position: 'absolute',
+  top: '50%',
+  transform: 'translateY(-50%)',
+  width: 44,
+  height: 44,
+  bgcolor: 'background.paper',
+  color: 'text.primary',
+  boxShadow: '0 2px 12px rgba(26, 26, 46, 0.2)',
+  '&:hover': { bgcolor: 'grey.100' },
+  '&.Mui-focusVisible': { outline: '3px solid', outlineColor: 'primary.main' },
+} as const
+
+export const MatchDetailsDialog = ({
   match,
   onClose,
   onExited,
@@ -28,7 +41,7 @@ export function MatchDetailsDialog({
   match: MatchResponse | null
   onClose: () => void
   onExited: () => void
-}) {
+}) => {
   const { t } = useTranslation()
   const theme = useTheme()
   const fullscreen = useMediaQuery(theme.breakpoints.down('sm'))
@@ -82,13 +95,13 @@ export function MatchDetailsDialog({
   )
 }
 
-function PhotoGallery({
+const PhotoGallery = ({
   listing,
   galleryRef,
 }: {
   listing: MatchedListing
   galleryRef: RefObject<HTMLDivElement | null>
-}) {
+}) => {
   const { t } = useTranslation()
   const [index, setIndex] = useState(0)
   const count = listing.images.length
@@ -172,16 +185,3 @@ function PhotoGallery({
     </Box>
   )
 }
-
-const galleryArrowStyle = {
-  position: 'absolute',
-  top: '50%',
-  transform: 'translateY(-50%)',
-  width: 44,
-  height: 44,
-  bgcolor: 'background.paper',
-  color: 'text.primary',
-  boxShadow: '0 2px 12px rgba(26, 26, 46, 0.2)',
-  '&:hover': { bgcolor: 'grey.100' },
-  '&.Mui-focusVisible': { outline: '3px solid', outlineColor: 'primary.main' },
-} as const

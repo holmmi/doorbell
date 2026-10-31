@@ -1,6 +1,5 @@
 const API_PREFIX = '/api'
 const TOKEN_KEY = 'doorbell.accessToken'
-const TOKEN_CHANGED_EVENT = 'doorbell:token-changed'
 
 export class ApiError extends Error {
   readonly status: number
@@ -15,26 +14,9 @@ export class ApiError extends Error {
 }
 
 export const getToken = () => localStorage.getItem(TOKEN_KEY)
-export const setToken = (token: string) => {
+export const setToken = (token: string) =>
   localStorage.setItem(TOKEN_KEY, token)
-  window.dispatchEvent(new Event(TOKEN_CHANGED_EVENT))
-}
-export const clearToken = () => {
-  localStorage.removeItem(TOKEN_KEY)
-  window.dispatchEvent(new Event(TOKEN_CHANGED_EVENT))
-}
-
-export function subscribeToToken(onChange: () => void) {
-  const onStorage = (event: StorageEvent) => {
-    if (event.key === TOKEN_KEY || event.key === null) onChange()
-  }
-  window.addEventListener(TOKEN_CHANGED_EVENT, onChange)
-  window.addEventListener('storage', onStorage)
-  return () => {
-    window.removeEventListener(TOKEN_CHANGED_EVENT, onChange)
-    window.removeEventListener('storage', onStorage)
-  }
-}
+export const clearToken = () => localStorage.removeItem(TOKEN_KEY)
 
 type JsonRequestInit = Omit<RequestInit, 'body'> & { body?: unknown }
 

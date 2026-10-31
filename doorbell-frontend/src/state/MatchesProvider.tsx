@@ -1,51 +1,64 @@
-import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
-import { ApiError, getToken } from '../api/client'
+import {
+  createContext,
+  useCallback,
+  useEffect,
+  useState,
+  type ReactNode,
+} from 'react'
+import { ApiError } from '../api/client'
 import * as matchClient from '../api/matchClient'
-import { MatchesContext, type MatchesState } from './matchesContext'
 import { useAuth } from '../hooks/useAuth'
+import type { MatchResponse } from '../types/match'
 
-export function MatchesProvider({ children }: { children: ReactNode }) {
-  const { token } = useAuth()
-  return <MatchesSession key={token ?? 'anonymous'}>{children}</MatchesSession>
+interface MatchesState {
+  matches: MatchResponse[] | null
+  loading: boolean
+  error: boolean
+  forbidden: boolean
 }
 
-function MatchesSession({ children }: { children: ReactNode }) {
-  const { token, user, expire } = useAuth()
+// eslint-disable-next-line react-refresh/only-export-components -- Shared with useMatches.
+export const MatchesContext = createContext<
+  (MatchesState & { refresh: () => void }) | null
+>(null)
+
+export const MatchesProvider = ({ children }: { children: ReactNode }) => {
+  const { user } = useAuth()
+  // Remount the cache and its consumers on login/logout so no account data survives.
+  return (
+    <MatchesSession key={user?.id ?? 'anonymous'}>{children}</MatchesSession>
+  )
+}
+
+const MatchesSession = ({ children }: { children: ReactNode }) => {
+  const { user, logout } = useAuth()
   const tenant = user?.role === 'TENANT'
-  const [state, setState] = useState<Omit<MatchesState, 'refresh'>>({
+  const [state, setState] = useState<MatchesState>({
     matches: null,
-    loading: false,
+    loading: tenant,
     error: false,
     forbidden: false,
   })
-  const pendingRef = useRef<Promise<void> | null>(null)
-  const mountedRef = useRef(false)
+  const [revision, setRevision] = useState(0)
 
-  useEffect(() => {
-    mountedRef.current = true
-    return () => {
-      mountedRef.current = false
-    }
+  const refresh = useCallback(() => {
+    setState((previous) => ({ ...previous, loading: true, error: false }))
+    setRevision((value) => value + 1)
   }, [])
 
-  const refresh = useCallback((): Promise<void> => {
-    if (!tenant || getToken() !== token) return Promise.resolve()
-    if (pendingRef.current) return pendingRef.current
-    const isCurrent = () => mountedRef.current && getToken() === token
-    const request = (async () => {
-      // Defer startup until mount effects have completed, including StrictMode replay.
-      await Promise.resolve()
-      if (!isCurrent()) return
-      setState((previous) => ({ ...previous, loading: true, error: false }))
-      try {
-        const matches = await matchClient.getMatches()
-        if (isCurrent()) {
+  useEffect(() => {
+    if (!tenant) return
+    const controller = new AbortController()
+    void matchClient.getMatches(controller.signal).then(
+      (matches) => {
+        if (!controller.signal.aborted) {
           setState({ matches, loading: false, error: false, forbidden: false })
         }
-      } catch (error) {
-        if (!isCurrent()) return
+      },
+      (error: unknown) => {
+        if (controller.signal.aborted) return
         if (error instanceof ApiError && error.status === 401) {
-          expire()
+          logout()
         } else if (error instanceof ApiError && error.status === 403) {
           setState({
             matches: null,
@@ -57,16 +70,9 @@ function MatchesSession({ children }: { children: ReactNode }) {
           setState((previous) => ({ ...previous, loading: false, error: true }))
         }
       }
-    })().finally(() => {
-      pendingRef.current = null
-    })
-    pendingRef.current = request
-    return request
-  }, [tenant, token, expire])
-
-  useEffect(() => {
-    if (tenant) void refresh()
-  }, [tenant, refresh])
+    )
+    return () => controller.abort()
+  }, [tenant, revision, logout])
 
   return (
     <MatchesContext value={{ ...state, refresh }}>{children}</MatchesContext>

@@ -168,7 +168,6 @@ const resources = {
         loadError: 'We could not load your matches. Please try again.',
         refreshError:
           'We could not refresh your matches. Your previous results are still shown. Please try again.',
-        sessionError: 'We could not verify your account. Please try again.',
         tenantOnly: 'Matches are available to tenant accounts only.',
         home: 'Home',
         browse: 'Browse homes',

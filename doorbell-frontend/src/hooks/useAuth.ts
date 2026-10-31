@@ -1,18 +1,15 @@
 import { createContext, use } from 'react'
 import type { LoginInput, RegistrationInput, UserInfo } from '../types/user'
 
-export type AuthStatus = 'loading' | 'authenticated' | 'anonymous' | 'error'
+export type AuthStatus = 'loading' | 'authenticated' | 'anonymous'
 
 export type AuthContextValue = {
   // Includes the account role (LANDLORD or TENANT) from /api/user/info.
-  token: string | null
   user: UserInfo | null
   status: AuthStatus
   login: (input: LoginInput) => Promise<UserInfo>
   register: (input: RegistrationInput) => Promise<UserInfo>
   logout: () => void
-  expire: () => void
-  retry: () => void
 }
 
 // Provided by AuthProvider. Kept here because component files may only

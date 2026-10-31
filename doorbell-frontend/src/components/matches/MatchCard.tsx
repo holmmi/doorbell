@@ -6,13 +6,13 @@ import { ContactPanel } from './ContactPanel'
 import { ListingPhoto } from './ListingPhoto'
 import { ListingSummary } from './ListingSummary'
 
-export function MatchCard({
+export const MatchCard = ({
   match,
   onDetails,
 }: {
   match: MatchResponse
   onDetails: () => void
-}) {
+}) => {
   const { t } = useTranslation()
   const [showContact, setShowContact] = useState(false)
   const contactId = useId()
