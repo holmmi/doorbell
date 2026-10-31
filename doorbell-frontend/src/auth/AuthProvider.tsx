@@ -17,18 +17,19 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   )
 
   useEffect(() => {
-    if (!getToken()) return
+    const token = getToken()
+    if (!token) return
     let active = true
 
     userClient
       .getCurrentUser()
       .then((currentUser) => {
-        if (!active) return
+        if (!active || getToken() !== token) return
         setUser(currentUser)
         setStatus('authenticated')
       })
       .catch((error: unknown) => {
-        if (!active) return
+        if (!active || getToken() !== token) return
         // Keep the token on network errors so a reload can recover.
         if (error instanceof ApiError && error.status === 401) {
           userClient.logout()
