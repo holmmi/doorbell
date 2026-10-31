@@ -11,6 +11,7 @@ const resources = {
       nav: {
         home: 'Home',
         matches: 'Matches',
+        likes: 'Likes',
         profile: 'Profile',
       },
       profile: {
@@ -148,6 +149,26 @@ const resources = {
       },
       matches: {
         count: '3',
+      },
+      likes: {
+        title: 'Likes',
+        subtitle: 'Review tenants who are interested in your homes.',
+        waiting: 'Waiting for your decision',
+        matched: 'Matched tenants',
+        empty: 'No tenants are waiting for your decision.',
+        matchedEmpty:
+          'Matched tenants will appear here after you accept an applicant.',
+        matchedBadge: 'Matched',
+        interestedIn: 'Interested in this home',
+        perMonth: '/mo',
+        accept: 'Match',
+        decline: 'Decline',
+        emptyTitle: 'No new likes yet',
+        emptyBody:
+          'When a tenant likes one of your homes, they will appear here.',
+        accepted: 'You matched with {{name}}.',
+        declined: 'You declined {{name}}.',
+        retry: 'Try again',
       },
       listing: {
         back: '← Back to home',

@@ -4,7 +4,9 @@ import {
   createApplicantDecision,
   createListingPreference,
   getListingApplicants,
-  getMatches,
+  getApplicantsForLandlord,
+  getMatchesForLandlord,
+  getMatchesForTenant,
 } from '../controllers/listingInteractionController.js'
 import { authenticate } from '../middlewares/authenticate.js'
 import { requireRole } from '../middlewares/requireRole.js'
@@ -18,7 +20,17 @@ const listingInteractionRouter = Router()
 const landlordOnly = [authenticate, requireRole('LANDLORD')]
 const tenantOnly = [authenticate, requireRole('TENANT')]
 
-listingInteractionRouter.get('/matches', tenantOnly, getMatches)
+listingInteractionRouter.get('/tenant-matches', tenantOnly, getMatchesForTenant)
+listingInteractionRouter.get(
+  '/applicants',
+  landlordOnly,
+  getApplicantsForLandlord
+)
+listingInteractionRouter.get(
+  '/landlord-matches',
+  landlordOnly,
+  getMatchesForLandlord
+)
 listingInteractionRouter.post(
   '/:listingId/preference',
   tenantOnly,

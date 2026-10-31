@@ -14,6 +14,7 @@ import { ProfileAvatar } from './ProfileAvatar'
 const navItems = [
   { key: 'home', to: '/' },
   { key: 'matches', to: '/matches', role: 'TENANT' },
+  { key: 'likes', to: '/likes', role: 'LANDLORD' },
   { key: 'profile', to: '/profile' },
 ] as const satisfies { key: string; to: string; role?: UserRole }[]
 

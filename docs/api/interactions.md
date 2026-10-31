@@ -48,6 +48,74 @@ Tenant contact details and passwords are not exposed. Profile images, age,
 occupation and introduction can be added when profile management supports them.
 Profile images will use presigned URLs.
 
+## Retrieve all pending applicants for a landlord
+
+`GET /api/listing-interaction/applicants`
+
+This landlord-only endpoint returns pending likes across all listings owned by
+the authenticated landlord:
+
+```json
+[
+  {
+    "tenantId": "9",
+    "firstName": "Ada",
+    "lastName": "Tenant",
+    "listing": {
+      "id": "42",
+      "monthlyPrice": "1250.00",
+      "squareMeters": "42.50",
+      "neighborhood": "Kallio",
+      "city": "Helsinki",
+      "availableFrom": "2026-11-01",
+      "extraCosts": "Water 25 EUR/month",
+      "rooms": "ONE_ROOM_AND_KITCHEN",
+      "published": true,
+      "images": [
+        {
+          "id": "100",
+          "displayOrder": 1,
+          "imageUrl": "<pre-signed S3 GET URL>"
+        }
+      ]
+    }
+  }
+]
+```
+
+Only pending likes are returned. Applicants are ordered by listing ID, tenant
+ID and image order. Tenant contact details and passwords are not exposed.
+Listing images use the same presigned URL behavior as tenant match responses.
+
+## Retrieve landlord matches
+
+`GET /api/listing-interaction/landlord-matches`
+
+This landlord-only endpoint returns tenants accepted by the authenticated
+landlord. It includes only fields already available in the user and listing
+records:
+
+```json
+[
+  {
+    "tenantId": "9",
+    "firstName": "Ada",
+    "lastName": "Tenant",
+    "email": "ada@example.com",
+    "phone": null,
+    "listing": {
+      "id": "42",
+      "neighborhood": "Kallio",
+      "city": "Helsinki"
+    }
+  }
+]
+```
+
+Profile pictures, biographies, occupations, ages and apartment images are not
+included. The landlord Likes view uses this response for its matched-tenant
+section; tenant match retrieval remains a separate tenant-only operation.
+
 ## Accept or decline an applicant
 
 `POST /api/listing-interaction/42/applicants/9/decision`
@@ -74,7 +142,7 @@ Database failures roll back the entire operation so the request can be retried.
 
 ## Retrieve tenant matches
 
-`GET /api/listing-interaction/matches`
+`GET /api/listing-interaction/tenant-matches`
 
 ```json
 [
