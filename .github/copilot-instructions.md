@@ -10,6 +10,11 @@ repository uses npm workspaces:
   routes; `/login` and `/registration` render outside `AppShell`. Auth forms use
   React Hook Form with Zod via `@hookform/resolvers`; reusable JSON API clients
   and user auth methods live under `src/api/`.
+- `src/auth/AuthProvider.tsx` owns authentication through login and logout.
+  Protected views use `ProtectedRoute`, with a role when needed.
+  `src/state/MatchesProvider.tsx` sits below `AuthProvider` and shares tenant
+  matches between `/matches` and its navigation badge. `src/hooks/useMatches.tsx`
+  exposes the shared state. Match data resets when the signed-in account changes.
 - `doorbell-backend/`: Express server. `src/app.ts` creates and exports the app;
   `src/index.ts` starts it on port 8001.
 - Backend user routes live in `src/routers/userRouter.ts` under `/api/user`.
@@ -178,6 +183,8 @@ Both runtime images include `curl` for future healthchecks.
 
 ## Configuration and conventions
 
+- Use arrow functions for components, hooks, and standalone helpers throughout
+  the codebase. Keep class constructors and methods in their normal syntax.
 - The backend loads dotenv once at the start of `src/app.ts`, using
   `doorbell-backend/.env` when run through workspace scripts. Set
   `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`,
