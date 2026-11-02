@@ -87,9 +87,12 @@ export const publishListing = (listingId: string): Promise<PublishedListing> =>
     { method: 'POST' }
   )
 
-export const getPendingApplicants = (): Promise<PendingApplicant[]> =>
+export const getPendingApplicants = (
+  signal?: AbortSignal
+): Promise<PendingApplicant[]> =>
   authenticatedClient.request<PendingApplicant[]>(
-    '/listing-interaction/applicants'
+    '/listing-interaction/applicants',
+    { signal }
   )
 
 export const getLandlordMatches = (): Promise<LandlordMatch[]> =>

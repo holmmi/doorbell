@@ -9,7 +9,7 @@ import { AuthLayout } from './components/AuthLayout'
 import { PageLoader } from './components/PageLoader'
 import './i18n'
 import { theme } from './theme/theme'
-import { MatchesProvider } from './state/MatchesProvider'
+import { InteractionsProvider } from './state/InteractionsProvider'
 
 // Views are named exports, so map each one to the default export lazy expects.
 const lazyView = <T extends Record<string, ComponentType>>(
@@ -43,7 +43,7 @@ const App = () => {
       <CssBaseline />
       <BrowserRouter>
         <AuthProvider>
-          <MatchesProvider>
+          <InteractionsProvider>
             <Routes>
               <Route element={<AuthLayout />}>
                 <Route path="/login" element={page(LoginView)} />
@@ -69,7 +69,7 @@ const App = () => {
                 <Route path="/likes" element={page(LikesView)} />
               </Route>
             </Routes>
-          </MatchesProvider>
+          </InteractionsProvider>
         </AuthProvider>
       </BrowserRouter>
     </ThemeProvider>

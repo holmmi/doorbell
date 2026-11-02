@@ -19,12 +19,14 @@ import type {
 } from '../types/listingInteraction'
 import { brand } from '../theme/tokens'
 import { formatNumber } from '../utils/format'
+import { useLikes } from '../hooks/useLikes'
 
 const errorCodeOf = (error: unknown) =>
   error instanceof ApiError ? error.code : 'error.unknown'
 
 export const LikesView = () => {
   const { t, i18n } = useTranslation()
+  const { refresh: refreshLikes } = useLikes()
   const [applicants, setApplicants] = useState<PendingApplicant[] | null>(null)
   const [matches, setMatches] = useState<LandlordMatch[] | null>(null)
   const [busyKey, setBusyKey] = useState<string | null>(null)
@@ -63,7 +65,8 @@ export const LikesView = () => {
 
   useEffect(() => {
     void Promise.resolve().then(() => loadData())
-  }, [loadData])
+    refreshLikes()
+  }, [loadData, refreshLikes])
 
   const handleDecision = async (
     applicant: PendingApplicant,
@@ -77,6 +80,7 @@ export const LikesView = () => {
       setApplicants(
         (current) => current?.filter((item) => item !== applicant) ?? current
       )
+      refreshLikes()
       if (decision === 'ACCEPTED') {
         await refreshMatches()
       }

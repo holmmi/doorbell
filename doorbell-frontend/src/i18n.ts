@@ -195,6 +195,8 @@ const resources = {
         loadError: 'We could not load your likes. Please try again.',
         matchesRefreshError:
           'We could not refresh your matched tenants. Please try again.',
+        pendingCount_one: '{{count}} pending like',
+        pendingCount_other: '{{count}} pending likes',
         retry: 'Try again',
       },
       listing: {

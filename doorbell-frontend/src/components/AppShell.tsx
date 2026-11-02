@@ -4,6 +4,7 @@ import { NavLink, Outlet } from 'react-router'
 import { useTranslation } from 'react-i18next'
 import { useAuth } from '../hooks/useAuth'
 import { useMatches } from '../hooks/useMatches'
+import { useLikes } from '../hooks/useLikes'
 import type { UserRole } from '../types/user'
 import { DoorbellLogo } from './DoorbellLogo'
 import { Footer } from './Footer'
@@ -24,6 +25,7 @@ export const AppShell = () => {
   const theme = useTheme()
   const { user, status } = useAuth()
   const { matches, forbidden } = useMatches()
+  const { pendingCount, error: likesError } = useLikes()
   const isLoggedIn = status === 'authenticated'
 
   return (
@@ -111,6 +113,14 @@ export const AppShell = () => {
                     <Badge
                       count={matches.length}
                       label={t('matches.count', { count: matches.length })}
+                    />
+                  ) : null}
+                  {item.key === 'likes' &&
+                  pendingCount !== null &&
+                  !likesError ? (
+                    <Badge
+                      count={pendingCount}
+                      label={t('likes.pendingCount', { count: pendingCount })}
                     />
                   ) : null}
                 </NavLink>
