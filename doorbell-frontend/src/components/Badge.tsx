@@ -1,13 +1,16 @@
 import { Box, Typography } from '@mui/material'
 
-type MatchesBadgeProps = {
+type BadgeProps = {
   count: number
+  label: string
 }
 
-export const MatchesBadge = ({ count }: MatchesBadgeProps) => {
+export const Badge = ({ count, label }: BadgeProps) => {
+  if (count === 0) return null
   return (
     <Box
       component="span"
+      aria-label={label}
       sx={{
         display: 'inline-flex',
         alignItems: 'center',

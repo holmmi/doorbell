@@ -32,7 +32,7 @@ listingRouter.post(
   validateRequestBody(listingSchema),
   createRentalListing
 )
-listingRouter.get('/:listingId', landlordOnly, getRentalListing)
+listingRouter.get('/:listingId', optionalAuthenticate, getRentalListing)
 listingRouter.put(
   '/:listingId',
   landlordOnly,

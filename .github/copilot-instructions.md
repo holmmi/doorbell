@@ -10,6 +10,11 @@ repository uses npm workspaces:
   routes; `/login` and `/registration` render outside `AppShell`. Auth forms use
   React Hook Form with Zod via `@hookform/resolvers`; reusable JSON API clients
   and user auth methods live under `src/api/`.
+- `src/auth/AuthProvider.tsx` owns authentication through login and logout.
+  Protected views use `ProtectedRoute`, with a role when needed.
+  `src/state/MatchesProvider.tsx` sits below `AuthProvider` and shares tenant
+  matches between `/matches` and its navigation badge. `src/hooks/useMatches.tsx`
+  exposes the shared state. Match data resets when the signed-in account changes.
 - `doorbell-backend/`: Express server. `src/app.ts` creates and exports the app;
   `src/index.ts` starts it on port 8001.
 - Backend user routes live in `src/routers/userRouter.ts` under `/api/user`.
@@ -122,8 +127,8 @@ disposable PostgreSQL 18.6 and Adobe S3Mock 5.2.3 containers on random ports.
 Their shared `src/routers/tests/helpers/integration.ts` fixture applies the
 migration SQL files directly, configures the backend before importing it, and
 cleans up containers even after setup/test failures. The suites cover listing
-creation, retrieval, updates, image uploads, publication, background cleanup,
-preferences, applicants and matches.
+creation, public reads, draft privacy, updates, image uploads, publication,
+background cleanup, preferences, applicants and matches.
 Test-only triggers exercise deferred constraint rollback and, with
 `pg_blocking_pids`, coordinate concurrent HTTP updates without fixed sleeps.
 Each integration suite sets `concurrency: false` so tests sharing its containers
@@ -178,6 +183,8 @@ Both runtime images include `curl` for future healthchecks.
 
 ## Configuration and conventions
 
+- Use arrow functions for components, hooks, and standalone helpers throughout
+  the codebase. Keep class constructors and methods in their normal syntax.
 - The backend loads dotenv once at the start of `src/app.ts`, using
   `doorbell-backend/.env` when run through workspace scripts. Set
   `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`,
@@ -196,8 +203,10 @@ Both runtime images include `curl` for future healthchecks.
   JPEG uploads are supported by the current image service. Publication requires
   at least one image to be finalized successfully.
 - Listing updates use complete basic details and an optional complete `images`
-  set. Omitting `images` preserves it; an empty set unpublishes. The owner GET
-  and PUT responses include sorted images and computed readiness. See
+  set. Omitting `images` preserves it; an empty set unpublishes. The listing GET
+  and PUT responses include sorted images and computed readiness. Published
+  listings can be read by anyone; unpublished listings require their current
+  landlord owner. Writes remain restricted to the current landlord owner. See
   `docs/api/listings.md` for the API contract and request examples.
 - All listing mutations lock the parent row in a transaction. Migration V3
   makes image order uniqueness deferrable for safe swaps, records issued uploads
