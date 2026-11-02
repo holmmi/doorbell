@@ -7,7 +7,7 @@ import {
   Snackbar,
   Typography,
 } from '@mui/material'
-import { useEffect, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ApiError } from '../api/client'
 import { decideApplicant, getPendingApplicants } from '../api/listingClient'
@@ -28,43 +28,42 @@ export const LikesView = () => {
   const [applicants, setApplicants] = useState<PendingApplicant[] | null>(null)
   const [matches, setMatches] = useState<LandlordMatch[] | null>(null)
   const [busyKey, setBusyKey] = useState<string | null>(null)
-  const [errorCode, setErrorCode] = useState<string | null>(null)
+  const [loadErrorCode, setLoadErrorCode] = useState<string | null>(null)
+  const [matchesErrorCode, setMatchesErrorCode] = useState<string | null>(null)
+  const [actionErrorCode, setActionErrorCode] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
 
-  useEffect(() => {
-    let active = true
-    Promise.all([getPendingApplicants(), getLandlordMatches()])
-      .then(([pending, landlordMatches]) => {
-        if (!active) return
-        setApplicants(pending)
-        setMatches(landlordMatches)
-      })
-      .catch((error: unknown) => {
-        if (!active) return
-        setApplicants([])
-        setMatches([])
-        setErrorCode(errorCodeOf(error))
-      })
-    return () => {
-      active = false
+  const loadData = useCallback(async () => {
+    setApplicants(null)
+    setMatches(null)
+    setLoadErrorCode(null)
+    setMatchesErrorCode(null)
+    try {
+      const [pending, landlordMatches] = await Promise.all([
+        getPendingApplicants(),
+        getLandlordMatches(),
+      ])
+      setApplicants(pending)
+      setMatches(landlordMatches)
+    } catch (error: unknown) {
+      setApplicants(null)
+      setMatches(null)
+      setLoadErrorCode(errorCodeOf(error))
     }
   }, [])
 
-  const loadApplicants = () => {
-    setApplicants(null)
-    setErrorCode(null)
-    getPendingApplicants()
-      .then((result) => {
-        setApplicants(result)
-        return getLandlordMatches()
-      })
-      .then(setMatches)
-      .catch((error: unknown) => {
-        setApplicants([])
-        setMatches([])
-        setErrorCode(errorCodeOf(error))
-      })
-  }
+  const refreshMatches = useCallback(async () => {
+    setMatchesErrorCode(null)
+    try {
+      setMatches(await getLandlordMatches())
+    } catch (error: unknown) {
+      setMatchesErrorCode(errorCodeOf(error))
+    }
+  }, [])
+
+  useEffect(() => {
+    void Promise.resolve().then(() => loadData())
+  }, [loadData])
 
   const handleDecision = async (
     applicant: PendingApplicant,
@@ -72,14 +71,14 @@ export const LikesView = () => {
   ) => {
     const key = `${applicant.listing.id}:${applicant.tenantId}`
     setBusyKey(key)
-    setErrorCode(null)
+    setActionErrorCode(null)
     try {
       await decideApplicant(applicant.listing.id, applicant.tenantId, decision)
       setApplicants(
         (current) => current?.filter((item) => item !== applicant) ?? current
       )
       if (decision === 'ACCEPTED') {
-        setMatches(await getLandlordMatches())
+        await refreshMatches()
       }
       setNotice(
         decision === 'ACCEPTED'
@@ -91,7 +90,7 @@ export const LikesView = () => {
             })
       )
     } catch (error: unknown) {
-      setErrorCode(errorCodeOf(error))
+      setActionErrorCode(errorCodeOf(error))
     } finally {
       setBusyKey(null)
     }
@@ -106,7 +105,22 @@ export const LikesView = () => {
         {t('likes.subtitle')}
       </Typography>
 
-      {applicants === null || matches === null ? (
+      {loadErrorCode !== null ? (
+        <Alert
+          severity="error"
+          action={
+            <Button
+              color="inherit"
+              size="small"
+              onClick={() => void loadData()}
+            >
+              {t('likes.retry')}
+            </Button>
+          }
+        >
+          {t(loadErrorCode, { defaultValue: t('likes.loadError') })}
+        </Alert>
+      ) : applicants === null || matches === null ? (
         <Box sx={{ display: 'flex', justifyContent: 'center', py: 12 }}>
           <CircularProgress aria-label={t('common.loading')} />
         </Box>
@@ -241,7 +255,24 @@ export const LikesView = () => {
             )}
           </Section>
           <Section title={t('likes.matched')} count={matches.length}>
-            {matches.length > 0 ? (
+            {matchesErrorCode ? (
+              <Alert
+                severity="error"
+                action={
+                  <Button
+                    color="inherit"
+                    size="small"
+                    onClick={() => void refreshMatches()}
+                  >
+                    {t('likes.retry')}
+                  </Button>
+                }
+              >
+                {t(matchesErrorCode, {
+                  defaultValue: t('likes.matchesRefreshError'),
+                })}
+              </Alert>
+            ) : matches.length > 0 ? (
               <Box
                 sx={{
                   display: 'grid',
@@ -329,23 +360,18 @@ export const LikesView = () => {
         </Alert>
       </Snackbar>
       <Snackbar
-        open={errorCode !== null}
+        open={actionErrorCode !== null}
         autoHideDuration={7000}
-        onClose={() => setErrorCode(null)}
+        onClose={() => setActionErrorCode(null)}
       >
         <Alert
           severity="error"
           variant="filled"
-          onClose={() => setErrorCode(null)}
+          onClose={() => setActionErrorCode(null)}
         >
-          {errorCode
-            ? t(errorCode, { defaultValue: t('error.unknown') })
+          {actionErrorCode
+            ? t(actionErrorCode, { defaultValue: t('error.unknown') })
             : null}
-          {applicants?.length === 0 && errorCode ? (
-            <Button color="inherit" size="small" onClick={loadApplicants}>
-              {t('likes.retry')}
-            </Button>
-          ) : null}
         </Alert>
       </Snackbar>
     </Box>

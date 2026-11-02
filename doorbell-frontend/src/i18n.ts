@@ -192,6 +192,9 @@ const resources = {
           'When a tenant likes one of your homes, they will appear here.',
         accepted: 'You matched with {{name}}.',
         declined: 'You declined {{name}}.',
+        loadError: 'We could not load your likes. Please try again.',
+        matchesRefreshError:
+          'We could not refresh your matched tenants. Please try again.',
         retry: 'Try again',
       },
       listing: {
