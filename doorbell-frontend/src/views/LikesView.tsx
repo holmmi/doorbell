@@ -10,8 +10,11 @@ import {
 import { useCallback, useEffect, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ApiError } from '../api/client'
-import { decideApplicant, getPendingApplicants } from '../api/listingClient'
-import { getLandlordMatches } from '../api/listingClient'
+import {
+  decideApplicant,
+  getLandlordMatches,
+  getPendingApplicants,
+} from '../api/listingInteractionClient'
 import type {
   ApplicantDecision,
   PendingApplicant,

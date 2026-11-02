@@ -15,12 +15,6 @@ import type {
   PresignedImageUpload,
   PublishedListing,
 } from '../types/listing'
-import type {
-  ApplicantDecision,
-  ApplicantDecisionResponse,
-  PendingApplicant,
-  LandlordMatch,
-} from '../types/listingInteraction'
 
 // The feed does not support filters or report a total yet, so callers filter
 // the returned page themselves.
@@ -85,30 +79,4 @@ export const publishListing = (listingId: string): Promise<PublishedListing> =>
   authenticatedClient.request<PublishedListing>(
     `${listingPath(listingId)}/publish`,
     { method: 'POST' }
-  )
-
-export const getPendingApplicants = (
-  signal?: AbortSignal
-): Promise<PendingApplicant[]> =>
-  authenticatedClient.request<PendingApplicant[]>(
-    '/listing-interaction/applicants',
-    { signal }
-  )
-
-export const getLandlordMatches = (): Promise<LandlordMatch[]> =>
-  authenticatedClient.request<LandlordMatch[]>(
-    '/listing-interaction/landlord-matches'
-  )
-
-export const decideApplicant = (
-  listingId: string,
-  tenantId: string,
-  decision: ApplicantDecision
-): Promise<ApplicantDecisionResponse> =>
-  authenticatedClient.request<ApplicantDecisionResponse>(
-    `/listing-interaction/${encodeURIComponent(listingId)}/applicants/${encodeURIComponent(tenantId)}/decision`,
-    {
-      method: 'POST',
-      body: { decision },
-    }
   )

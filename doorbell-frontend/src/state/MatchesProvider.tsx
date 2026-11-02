@@ -6,7 +6,7 @@ import {
   type ReactNode,
 } from 'react'
 import { ApiError } from '../api/client'
-import * as matchClient from '../api/matchClient'
+import * as listingInteractionClient from '../api/listingInteractionClient'
 import { useAuth } from '../hooks/useAuth'
 import type { MatchResponse } from '../types/match'
 
@@ -49,7 +49,7 @@ const MatchesSession = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     if (!tenant) return
     const controller = new AbortController()
-    void matchClient.getMatches(controller.signal).then(
+    void listingInteractionClient.getMatches(controller.signal).then(
       (matches) => {
         if (!controller.signal.aborted) {
           setState({ matches, loading: false, error: false, forbidden: false })

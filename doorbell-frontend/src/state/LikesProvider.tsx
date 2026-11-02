@@ -6,7 +6,7 @@ import {
   type ReactNode,
 } from 'react'
 import { ApiError } from '../api/client'
-import { getPendingApplicants } from '../api/listingClient'
+import { getPendingApplicants } from '../api/listingInteractionClient'
 import { useAuth } from '../hooks/useAuth'
 
 interface LikesState {
