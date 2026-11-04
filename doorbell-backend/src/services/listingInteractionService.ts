@@ -4,12 +4,15 @@ import { listingImageResponse } from '../mappers/listingResponse.js'
 import {
   findDecision,
   findPendingApplicants,
+  findPendingApplicantsForLandlord,
+  findLandlordMatches,
   findPreference,
   findTenantMatches,
   insertDecision,
   insertMatch,
   insertPreference,
 } from '../repositories/listingInteractionRepository.js'
+import { listingFeedResponse } from '../mappers/listingResponse.js'
 import {
   findListingImages,
   withListingLock,
@@ -56,6 +59,36 @@ export const getApplicants = async (listingId: string, ownerId: string) =>
   withListingLock(listingId, ownerId, (client) =>
     findPendingApplicants(client, listingId)
   )
+
+export const getLandlordApplicants = async (ownerId: string) => {
+  const applicants = await findPendingApplicantsForLandlord(ownerId)
+  return Promise.all(
+    applicants.map(async (applicant) => ({
+      tenantId: applicant.tenantId,
+      firstName: applicant.firstName,
+      lastName: applicant.lastName,
+      listing: await listingFeedResponse({
+        ...applicant.listing,
+        ownerId,
+        createdAt: '',
+      }),
+    }))
+  )
+}
+
+export const getLandlordMatches = async (ownerId: string) =>
+  (await findLandlordMatches(ownerId)).map((match) => ({
+    tenantId: match.tenantId,
+    firstName: match.tenantFirstName,
+    lastName: match.tenantLastName,
+    email: match.tenantEmail,
+    phone: match.tenantPhone,
+    listing: {
+      id: match.listingId,
+      neighborhood: match.neighborhood,
+      city: match.city,
+    },
+  }))
 
 export const decideApplicant = async (
   listingId: string,

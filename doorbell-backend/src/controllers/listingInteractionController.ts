@@ -3,6 +3,8 @@ import type { RequestHandler } from 'express'
 import {
   decideApplicant,
   getApplicants,
+  getLandlordApplicants,
+  getLandlordMatches,
   getTenantMatches,
   recordPreference,
 } from '../services/listingInteractionService.js'
@@ -43,6 +45,20 @@ export const getListingApplicants: RequestHandler = async (
   )
 }
 
+export const getApplicantsForLandlord: RequestHandler = async (
+  request,
+  response
+) => {
+  response.json(await getLandlordApplicants(request.auth?.userId as string))
+}
+
+export const getMatchesForLandlord: RequestHandler = async (
+  request,
+  response
+) => {
+  response.json(await getLandlordMatches(request.auth?.userId as string))
+}
+
 export const createApplicantDecision: RequestHandler = async (
   request,
   response
@@ -58,6 +74,9 @@ export const createApplicantDecision: RequestHandler = async (
   )
 }
 
-export const getMatches: RequestHandler = async (request, response) => {
+export const getMatchesForTenant: RequestHandler = async (
+  request,
+  response
+) => {
   response.json(await getTenantMatches(request.auth?.userId as string))
 }
