@@ -2,6 +2,15 @@ import { z } from 'zod'
 
 import { userRoles } from '../types/user.js'
 
+export const updateUserInfoSchema = z
+  .object({
+    firstName: z.string().min(1).optional(),
+    lastName: z.string().min(1).optional(),
+    phone: z.string().min(1).nullable().optional(),
+    picturePath: z.string().min(1).nullable().optional(),
+  })
+  .refine((input) => Object.values(input).some((value) => value !== undefined))
+
 export const loginSchema = z.object({
   email: z.email(),
   password: z

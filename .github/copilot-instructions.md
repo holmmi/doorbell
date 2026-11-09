@@ -22,7 +22,9 @@ repository uses npm workspaces:
   `src/middlewares/authenticate.ts` verifies bearer JWTs and exposes
   `request.auth.userId` to protected handlers. `GET /api/user/info` uses it
   to return the current account's public fields, including nullable phone
-  and picture path values. A token for a missing account receives HTTP 401.
+  and picture path values. `PATCH /api/user/info` updates only supplied profile
+  fields for that account; explicit null clears phone or picture path.
+  A token for a missing account receives HTTP 401.
 - `migrations/`: Flyway SQL migrations for the PostgreSQL database.
 - `docker-compose.yml`: starts PostgreSQL 18.6 as `db`, Flyway 13.9.0 to
   apply the migrations, and Adobe S3Mock 5.2.3 as `s3mock` on port 9090.
@@ -118,8 +120,9 @@ route with isolated test environment variables and a stubbed PostgreSQL
 `pool.query`. It loads database configuration but never connects to PostgreSQL,
 so that test file requires no running database.
 
-`src/routers/tests/listing.integration.test.ts` and
-`src/routers/tests/listingInteraction.integration.test.ts` run with the other backend
+`src/routers/tests/listing.integration.test.ts`,
+`src/routers/tests/listingInteraction.integration.test.ts` and
+`src/routers/tests/userInfo.integration.test.ts` run with the other backend
 tests through `npm test --workspace=doorbell-backend`. They require a running
 Docker-compatible runtime with Linux containers and fail if none is available.
 Pinned `@testcontainers/postgresql` and `@testcontainers/s3mock` packages start
@@ -128,7 +131,7 @@ Their shared `src/routers/tests/helpers/integration.ts` fixture applies the
 migration SQL files directly, configures the backend before importing it, and
 cleans up containers even after setup/test failures. The suites cover listing
 creation, public reads, draft privacy, updates, image uploads, publication,
-background cleanup, preferences, applicants and matches.
+background cleanup, preferences, applicants, matches and profile updates.
 Test-only triggers exercise deferred constraint rollback and, with
 `pg_blocking_pids`, coordinate concurrent HTTP updates without fixed sleeps.
 Each integration suite sets `concurrency: false` so tests sharing its containers
