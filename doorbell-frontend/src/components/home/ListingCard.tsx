@@ -310,7 +310,6 @@ export function ListingCard({
               })}
             </Typography>
           </Box>
-          {/* TODO: details page */}
           <Button
             component={Link}
             to={`/listings/${listing.id}`}

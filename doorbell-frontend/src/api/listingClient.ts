@@ -33,8 +33,15 @@ export const createListing = (input: ListingInput): Promise<CreatedListing> =>
     body: input,
   })
 
-export const getListing = (listingId: string): Promise<ListingDetails> =>
-  authenticatedClient.request<ListingDetails>(listingPath(listingId))
+// Published listings are public. Send the token when there is one so owners
+// can also read their own unpublished listings.
+export const getListing = (
+  listingId: string,
+  signal?: AbortSignal
+): Promise<ListingDetails> => {
+  const client = getToken() ? authenticatedClient : unauthenticatedClient
+  return client.request<ListingDetails>(listingPath(listingId), { signal })
+}
 
 export const requestImageUpload = (
   listingId: string,

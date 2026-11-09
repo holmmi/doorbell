@@ -147,6 +147,17 @@ const resources = {
           },
         },
       },
+      listingDetails: {
+        backToBrowsing: 'Back to browsing',
+        heading: 'Home in {{location}}',
+        loading: 'Loading listing…',
+        notFoundTitle: 'Listing not found',
+        notFoundBody:
+          'This listing may have been removed or is no longer available.',
+        loadError: 'We could not load this listing. Please try again.',
+        retry: 'Retry',
+        unpublished: 'Not published. Only you can see this listing.',
+      },
       matches: {
         title: 'Your matches',
         subtitle:
