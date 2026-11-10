@@ -76,6 +76,7 @@ before(
       DB_NAME: postgres.getDatabase(),
       DB_USER: postgres.getUsername(),
       DB_PASSWORD: postgres.getPassword(),
+      DB_SSL: 'false',
       S3_ENDPOINT: s3mock.getHttpConnectionUrl(),
       S3_REGION: 'us-east-1',
       S3_ACCESS_KEY: s3mock.getAccessKeyId(),
