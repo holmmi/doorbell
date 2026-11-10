@@ -29,7 +29,7 @@ docker compose up -d
 ```
 
 PostgreSQL is available at `localhost:5432`. Flyway waits for PostgreSQL to
-become healthy, then applies the migrations from `migrations/` before exiting.
+become healthy, then applies the migrations from `migrations/sql/` before exiting.
 Check the migration result with:
 
 ```shell
@@ -135,3 +135,55 @@ docker build -f doorbell-frontend/Dockerfile -t doorbell-frontend:local .
 ```
 
 Both runtime images include `curl` for future container health checks.
+
+## Heroku deployment
+
+Heroku deployment uses [heroku.yml](heroku.yml) with a combined web image and
+a separate Flyway release image. The web image builds the frontend, serves it
+through Nginx, and runs the backend behind the `/api` reverse proxy.
+
+Create a Heroku app using the container stack and configure these variables in
+Heroku. Do not commit them or put them in a Docker build context:
+
+```shell
+heroku stack:set container --app YOUR_APP
+heroku config:set \
+  DB_HOST=... \
+  DB_PORT=5432 \
+  DB_NAME=... \
+  DB_USER=... \
+  DB_PASSWORD=... \
+  JWT_SECRET=... \
+  S3_ENDPOINT=https://ACCOUNT_ID.r2.cloudflarestorage.com \
+  S3_REGION=auto \
+  S3_ACCESS_KEY=... \
+  S3_SECRET_KEY=... \
+  S3_BUCKET=... \
+  S3_FORCE_PATH_STYLE=true \
+  FLYWAY_URL=jdbc:postgresql://... \
+  FLYWAY_USER=... \
+  FLYWAY_PASSWORD=... \
+  --app YOUR_APP
+```
+
+`S3_ENDPOINT`, `S3_REGION`, and the access credentials are the Cloudflare R2
+S3-compatible settings. Use the database provider's SSL parameters in
+`FLYWAY_URL` when required. Heroku supplies `PORT` automatically; the web
+entrypoint configures both Nginx and the backend for it.
+
+Deploy from the repository root with the Heroku CLI:
+
+```shell
+git push heroku main
+heroku logs --tail --app YOUR_APP
+```
+
+The release phase runs Flyway migrations before the web process starts. A
+missing or invalid runtime variable causes startup or release to fail
+explicitly. A local `.env` file is not required for the image build or Heroku
+deployment: `dotenv` treats it as optional, and Heroku config vars are
+available when the processes start. The Docker build also excludes `.env`
+files.
+
+After deployment, verify the frontend and API are reachable and exercise an
+authenticated image upload to confirm that objects are stored in R2.
