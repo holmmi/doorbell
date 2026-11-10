@@ -84,7 +84,7 @@ before(
       S3_FORCE_PATH_STYLE: 'true',
     })
     ;({ pool } = await import('../../../config/database.js'))
-    const migrations = new URL('../../../../../migrations/', import.meta.url)
+    const migrations = new URL('../../../../../migrations/sql/', import.meta.url)
     const filenames = (await readdir(migrations))
       .filter((name) => /^V\d+__.*\.sql$/.test(name))
       .sort((a, b) => a.localeCompare(b, 'en', { numeric: true }))

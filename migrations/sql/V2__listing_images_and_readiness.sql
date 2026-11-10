@@ -26,3 +26,4 @@ CREATE UNIQUE INDEX rental_listing_image_listing_display_order_idx
 
 CREATE UNIQUE INDEX rental_listing_image_listing_image_path_idx
     ON rental_listing_image (rental_listing_id, image_path);
+--

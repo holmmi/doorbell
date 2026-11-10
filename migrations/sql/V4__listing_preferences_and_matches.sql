@@ -73,3 +73,4 @@ CREATE INDEX match_tenant_created_at_idx
     ON "match" (tenant_user_id, created_at DESC, rental_listing_id DESC);
 CREATE INDEX rental_listing_preference_applicants_idx
     ON rental_listing_preference (rental_listing_id, tenant_user_id) WHERE liked;
+--
