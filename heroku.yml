@@ -1,6 +1,6 @@
 build:
   docker:
-    web: deployment/Dockerfile.heroku
+    web: Dockerfile.heroku
     release: migrations/Dockerfile.heroku
 release:
   image: release

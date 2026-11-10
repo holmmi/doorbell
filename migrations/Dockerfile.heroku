@@ -1,6 +1,6 @@
 FROM flyway/flyway:13.9.0
 
-COPY migrations/sql /flyway/sql
+COPY sql /flyway/sql
 
 ENV FLYWAY_LOCATIONS=filesystem:/flyway/sql
 
