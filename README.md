@@ -75,6 +75,7 @@ DB_PORT=5432
 DB_NAME=doorbell
 DB_USER=doorbell
 DB_PASSWORD=doorbell
+DB_SSL=false
 JWT_SECRET=
 S3_ENDPOINT=http://localhost:9090
 S3_REGION=us-east-1
@@ -153,6 +154,7 @@ heroku config:set \
   DB_NAME=... \
   DB_USER=... \
   DB_PASSWORD=... \
+  DB_SSL=true \
   JWT_SECRET=... \
   S3_ENDPOINT=https://ACCOUNT_ID.r2.cloudflarestorage.com \
   S3_REGION=auto \
