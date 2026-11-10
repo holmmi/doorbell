@@ -4,7 +4,6 @@ build:
     release: migrations/Dockerfile.heroku
 release:
   image: release
-  command:
-    - migrate
+  command: flyway migrate
 run:
   web: /usr/local/bin/start-heroku.sh

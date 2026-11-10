@@ -4,5 +4,5 @@ COPY sql /flyway/sql
 
 ENV FLYWAY_LOCATIONS=filesystem:/flyway/sql
 
-ENTRYPOINT ["flyway"]
-CMD ["migrate"]
+ENTRYPOINT []
+CMD ["flyway", "migrate"]
