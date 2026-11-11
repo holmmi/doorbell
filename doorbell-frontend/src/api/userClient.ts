@@ -1,6 +1,7 @@
 import type {
   LoginInput,
   LoginResponse,
+  ProfileUpdate,
   RegistrationInput,
   UserInfo,
 } from '../types/user'
@@ -35,5 +36,11 @@ export const login = async (input: LoginInput): Promise<UserInfo> => {
     throw error
   }
 }
+
+export const updateCurrentUser = (update: ProfileUpdate): Promise<UserInfo> =>
+  authenticatedClient.request<UserInfo>('/user/info', {
+    method: 'PATCH',
+    body: update,
+  })
 
 export const logout = clearToken
