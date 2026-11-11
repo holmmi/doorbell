@@ -4,6 +4,7 @@ import {
   createRentalListing,
   getRentalListingFeed,
   getRentalListing,
+  getMyRentalListings,
   presignListingImage,
   publishRentalListing,
   uploadListingImage,
@@ -26,6 +27,7 @@ const listingRouter = Router()
 const landlordOnly = [authenticate, requireRole('LANDLORD')]
 
 listingRouter.get('/', optionalAuthenticate, getRentalListingFeed)
+listingRouter.get('/mine', landlordOnly, getMyRentalListings)
 listingRouter.post(
   '/',
   landlordOnly,

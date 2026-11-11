@@ -124,6 +124,26 @@ export const getListingDetails = async (
   return { ...listing, ready: images.length > 0, images }
 }
 
+export const findOwnedListings = async (
+  ownerId: string
+): Promise<ListingDetails[]> => {
+  const client = await pool.connect()
+  try {
+    const result = await client.query<Listing>(
+      `SELECT ${listingColumns} FROM rental_listing
+       WHERE owner_id = $1 ORDER BY id`,
+      [ownerId]
+    )
+    const listings: ListingDetails[] = []
+    for (const listing of result.rows) {
+      listings.push(await getListingDetails(client, listing))
+    }
+    return listings
+  } finally {
+    client.release()
+  }
+}
+
 export const findListingFeed = async (
   userId: string | undefined,
   limit: number
