@@ -238,6 +238,9 @@ const resources = {
         addPhotos: 'Add photos',
         addMore: '+ Add more',
         removePhoto: 'Remove {{name}}',
+        movePhotoEarlier: 'Move {{name}} earlier',
+        movePhotoLater: 'Move {{name}} later',
+        photoNumber: 'Photo {{number}}',
         publish: 'Publish listing',
         published: 'Listing published ✓',
         preview: 'Preview: what renters see',
@@ -256,6 +259,26 @@ const resources = {
           uploading: 'Uploading photos…',
           saving: 'Saving listing…',
           publishing: 'Publishing listing…',
+        },
+        edit: {
+          cta: 'Edit listing',
+          title: 'Edit your listing',
+          subtitle:
+            'Change the details or photos. Renters see your changes as soon as you save.',
+          save: 'Save changes',
+          saveAndUnpublish: 'Save and unpublish',
+          unpublishWarning:
+            'This listing has no photos left. Saving now takes it off the renter feed until you add a photo and publish it again.',
+          statusPublished: 'Published',
+          statusDraft: 'Draft, hidden from renters',
+          draftHint:
+            'This listing is saved with photos but not published yet. Publish it so renters can find it.',
+          notice: {
+            saved: 'Changes saved ✓',
+            reloaded:
+              'Your last save went through, so the listing was reloaded from the server.',
+            published: 'Listing published ✓',
+          },
         },
         validation: {
           required: 'This field is required.',
