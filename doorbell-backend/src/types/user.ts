@@ -26,6 +26,10 @@ export interface UserInfo {
   picturePath: string | null
 }
 
+export interface UserInfoResponse extends UserInfo {
+  pictureUrl: string | null
+}
+
 export interface RegistrationInput {
   firstName: string
   lastName: string

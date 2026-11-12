@@ -22,7 +22,9 @@ repository uses npm workspaces:
   `src/middlewares/authenticate.ts` verifies bearer JWTs and exposes
   `request.auth.userId` to protected handlers. `GET /api/user/info` uses it
   to return the current account's public fields, including nullable phone
-  and picture path values. `PATCH /api/user/info` updates only supplied profile
+  and picture path values, plus a nullable 15-minute signed `pictureUrl`.
+  `POST /api/user/picture/presign` stages a unique upload for either role.
+  `PATCH /api/user/info` updates only supplied profile
   fields for that account; explicit null clears phone or picture path.
   A token for a missing account receives HTTP 401.
 - `migrations/`: Flyway SQL migrations for the PostgreSQL database.
@@ -122,7 +124,8 @@ so that test file requires no running database.
 
 `src/routers/tests/listing.integration.test.ts`,
 `src/routers/tests/listingInteraction.integration.test.ts` and
-`src/routers/tests/userInfo.integration.test.ts` run with the other backend
+`src/routers/tests/userInfo.integration.test.ts` and
+`src/routers/tests/userPicture.integration.test.ts` run with the other backend
 tests through `npm test --workspace=doorbell-backend`. They require a running
 Docker-compatible runtime with Linux containers and fail if none is available.
 Pinned `@testcontainers/postgresql` and `@testcontainers/s3mock` packages start
@@ -219,6 +222,11 @@ Both runtime images include `curl` for future healthchecks.
   period and storage failures retry after five minutes.
 - The backend depends on the pinned AWS SDK S3 client and presigner packages;
   update `package-lock.json` whenever those dependencies change.
+- Profile saves lock the account row and verify staged pictures before committing
+  any fields. Migration V5 tracks profile uploads for 24 hours and reuses the
+  durable image cleanup queue for retired and abandoned objects. PUT signatures
+  bind Content-Type; signing options and URL refresh are tested separately from
+  S3Mock in `src/services/tests/imageService.test.ts`.
 - Root `package.json` defines the workspaces and shared `lint`/`build` scripts;
   `package-lock.json` must be updated with dependency changes.
 - Root `eslint.config.js` applies type-aware ESLint to both workspaces and

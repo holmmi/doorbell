@@ -1,12 +1,12 @@
 import assert from 'node:assert/strict'
 import { once } from 'node:events'
 import { request as httpRequest, type Server } from 'node:http'
-import { after, before, test, type TestContext } from 'node:test'
+import { after, before, beforeEach, test, type TestContext } from 'node:test'
 
 import jwt from 'jsonwebtoken'
 import type { QueryResult } from 'pg'
 
-import type { UserInfo } from '../../types/user.js'
+import type { UserInfo, UserInfoResponse } from '../../types/user.js'
 
 const testJwtSecret = 'test-only-jwt-secret-for-user-info'
 Object.assign(process.env, {
@@ -24,7 +24,7 @@ const { pool } = await import('../../config/database.js')
 const { default: app } = await import('../../app.js')
 const { createAccessToken } = await import('../../utils/jwt.js')
 
-const tenant: UserInfo = {
+const tenant: UserInfoResponse = {
   id: '9007199254740993',
   role: 'TENANT',
   firstName: 'Ada',
@@ -32,8 +32,9 @@ const tenant: UserInfo = {
   email: 'tenant@example.com',
   phone: null,
   picturePath: null,
+  pictureUrl: null,
 }
-const landlord: UserInfo = {
+const landlord: UserInfoResponse = {
   id: '42',
   role: 'LANDLORD',
   firstName: 'Sam',
@@ -41,6 +42,7 @@ const landlord: UserInfo = {
   email: 'landlord@example.com',
   phone: '+358401234567',
   picturePath: 'profiles/42/avatar.png',
+  pictureUrl: null,
 }
 const unauthorized = { error: 'error.authentication.unauthorized' }
 let server: Server
@@ -52,6 +54,19 @@ before(async () => {
   const address = server.address()
   assert.ok(address && typeof address !== 'string')
   baseUrl = `http://127.0.0.1:${address.port}`
+})
+
+beforeEach((context) => {
+  const t = context as TestContext
+  t.mock.method(pool, 'connect', () =>
+    Promise.resolve({
+      query: (sql: string, values?: unknown[]) =>
+        ['BEGIN', 'COMMIT', 'ROLLBACK'].includes(sql)
+          ? Promise.resolve({ rows: [] })
+          : pool.query(sql, values),
+      release: () => {},
+    })
+  )
 })
 
 after(async () => {
@@ -104,13 +119,14 @@ for (const user of [tenant, landlord]) {
       firstName: "Ada's new name",
       lastName: 'Example',
       phone: '+358409999999',
-      picturePath: 'profiles/new.png',
+      picturePath: null,
     }
     const updated = { ...user, ...changes }
     const query = t.mock.method(
       pool,
       'query',
       (sql: string, values: unknown[]) => {
+        if (sql.includes('FOR UPDATE')) return Promise.resolve({ rows: [user] })
         assert.match(sql, /UPDATE "user"/)
         assert.match(sql, /WHERE id = \$1/)
         assert.deepEqual(values, [user.id, ...Object.values(changes)])
@@ -127,7 +143,7 @@ for (const user of [tenant, landlord]) {
 
     assert.equal(response.status, 200)
     assert.deepEqual(await response.json(), updated)
-    assert.equal(query.mock.callCount(), 1)
+    assert.equal(query.mock.callCount(), 2)
   })
 }
 
@@ -136,6 +152,7 @@ void test('profile updates strip protected fields and use only the token subject
     pool,
     'query',
     (sql: string, values: unknown[]) => {
+      if (sql.includes('FOR UPDATE')) return Promise.resolve({ rows: [tenant] })
       assert.match(sql, /SET first_name = \$2\s+WHERE id = \$1/)
       assert.deepEqual(values, [tenant.id, 'Updated'])
       return Promise.resolve({ rows: [{ ...tenant, firstName: 'Updated' }] })
@@ -163,13 +180,15 @@ void test('profile updates strip protected fields and use only the token subject
 
   assert.equal(response.status, 200)
   assert.deepEqual(await response.json(), { ...tenant, firstName: 'Updated' })
-  assert.equal(query.mock.callCount(), 1)
+  assert.equal(query.mock.callCount(), 2)
 })
 
 for (const field of ['phone', 'picturePath'] as const) {
   void test(`profile updates can clear only ${field}`, async (t) => {
     const column = field === 'phone' ? 'phone' : 'picture_path'
     t.mock.method(pool, 'query', (sql: string, values: unknown[]) => {
+      if (sql.includes('FOR UPDATE'))
+        return Promise.resolve({ rows: [landlord] })
       assert.ok(sql.includes(`SET ${column} = $2\n`))
       assert.deepEqual(values, [landlord.id, null])
       return Promise.resolve({ rows: [{ ...landlord, [field]: null }] })

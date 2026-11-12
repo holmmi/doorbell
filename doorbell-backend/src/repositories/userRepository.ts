@@ -9,6 +9,7 @@ import type {
   UserInfo,
 } from '../types/user.js'
 import type { UserRole } from '../types/user.js'
+import { RequestError } from '../utils/requestError.js'
 
 const findUserInfoByIdQuery = `
   SELECT
@@ -64,7 +65,8 @@ export const findUserInfoById = async (
 
 export const updateUserInfoById = async (
   userId: string,
-  input: UpdateUserInfoInput
+  input: UpdateUserInfoInput,
+  client: Pick<PoolClient, 'query'> = pool
 ): Promise<UserInfo | undefined> => {
   const columns = {
     firstName: 'first_name',
@@ -82,7 +84,7 @@ export const updateUserInfoById = async (
     }
   }
 
-  const result = await pool.query<UserInfo>(
+  const result = await client.query<UserInfo>(
     `UPDATE "user"
      SET ${assignments.join(', ')}
      WHERE id = $1
@@ -92,6 +94,62 @@ export const updateUserInfoById = async (
   )
 
   return result.rows[0]
+}
+
+export const withUserLock = async <T>(
+  userId: string,
+  operation: (client: PoolClient, user: UserInfo) => Promise<T>
+): Promise<T> => {
+  const client = await pool.connect()
+  try {
+    await client.query('BEGIN')
+    const result = await client.query<UserInfo>(
+      `${findUserInfoByIdQuery} FOR UPDATE`,
+      [userId]
+    )
+    const user = result.rows[0]
+    if (!user) {
+      throw new RequestError(401, 'error.authentication.unauthorized')
+    }
+    const value = await operation(client, user)
+    await client.query('COMMIT')
+    return value
+  } catch (error) {
+    await client.query('ROLLBACK')
+    throw error
+  } finally {
+    client.release()
+  }
+}
+
+export const registerUserPictureUpload = async (
+  client: PoolClient,
+  userId: string,
+  objectKey: string,
+  contentType: string
+): Promise<void> => {
+  await client.query(
+    `INSERT INTO user_picture_upload (user_id, object_key, content_type)
+     VALUES ($1, $2, $3)`,
+    [userId, objectKey, contentType]
+  )
+}
+
+export const consumeUserPictureUpload = async (
+  client: PoolClient,
+  userId: string,
+  objectKey: string
+): Promise<string> => {
+  const result = await client.query<{ contentType: string }>(
+    `DELETE FROM user_picture_upload
+     WHERE user_id = $1 AND object_key = $2 AND expires_at > clock_timestamp()
+     RETURNING content_type AS "contentType"`,
+    [userId, objectKey]
+  )
+  if (!result.rows[0]) {
+    throw new RequestError(400, 'error.user.picture.invalidKey')
+  }
+  return result.rows[0].contentType
 }
 
 export const findUserCredentialsByEmail = async (

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { describe, test } from 'node:test'
 
-import type { UserInfo } from '../../types/user.js'
+import type { UserInfo, UserInfoResponse } from '../../types/user.js'
 import { baseUrl, pool } from './helpers/integration.js'
 
 const request = async (userId: string, method: string, body?: unknown) => {
@@ -34,7 +34,7 @@ void describe('profile updates persist', { concurrency: false }, () => {
         firstName: "Ada's new name",
         lastName: 'Lovelace',
         phone: '+358401234567',
-        picturePath: 'profiles/ada.png',
+        picturePath: null,
       }
       const response = await request(original.id, 'PATCH', {
         ...changes,
@@ -45,7 +45,11 @@ void describe('profile updates persist', { concurrency: false }, () => {
         password: 'changed-password',
         passwordHash: 'changed-hash',
       })
-      const expected: UserInfo = { ...original, ...changes }
+      const expected: UserInfoResponse = {
+        ...original,
+        ...changes,
+        pictureUrl: null,
+      }
       assert.equal(response.status, 200)
       assert.deepEqual(await response.json(), expected)
       const persisted = await request(original.id, 'GET')

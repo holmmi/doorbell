@@ -5,26 +5,19 @@ import {
   createUser,
   findUserCredentialsByEmail,
   findUserInfoById,
-  updateUserInfoById,
   userExistsByEmail,
 } from '../repositories/userRepository.js'
+import {
+  presignUserPicture,
+  toUserInfoResponse,
+  updateUserProfile,
+} from '../services/userService.js'
 import type {
   LoginInput,
   RegistrationInput,
   UpdateUserInfoInput,
-  UserInfo,
 } from '../types/user.js'
 import { createAccessToken } from '../utils/jwt.js'
-
-const toUserInfoResponse = (user: UserInfo): UserInfo => ({
-  id: user.id,
-  role: user.role,
-  firstName: user.firstName,
-  lastName: user.lastName,
-  email: user.email,
-  phone: user.phone,
-  picturePath: user.picturePath,
-})
 
 export const getUserInfo: RequestHandler = async (request, response) => {
   const userId = request.auth?.userId
@@ -41,7 +34,7 @@ export const getUserInfo: RequestHandler = async (request, response) => {
     return
   }
 
-  response.json(toUserInfoResponse(user))
+  response.json(await toUserInfoResponse(user))
 }
 
 export const updateUserInfo: RequestHandler = async (request, response) => {
@@ -52,17 +45,22 @@ export const updateUserInfo: RequestHandler = async (request, response) => {
     return
   }
 
-  const user = await updateUserInfoById(
+  const user = await updateUserProfile(
     userId,
     request.body as UpdateUserInfoInput
   )
 
-  if (!user) {
+  response.json(user)
+}
+
+export const presignPicture: RequestHandler = async (request, response) => {
+  const userId = request.auth?.userId
+  if (!userId) {
     response.status(401).json({ error: 'error.authentication.unauthorized' })
     return
   }
-
-  response.json(toUserInfoResponse(user))
+  const { contentType } = request.body as { contentType: string }
+  response.json(await presignUserPicture(userId, contentType))
 }
 
 export const loginUser: RequestHandler = async (request, response) => {

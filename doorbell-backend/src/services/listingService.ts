@@ -1,12 +1,12 @@
 import type { PoolClient } from 'pg'
 
+import { queueImageCleanup } from '../repositories/imageCleanupRepository.js'
 import {
   consumeListingImageUpload,
   createListingImage,
   deleteListingImage,
   findListingImages,
   getListingDetails,
-  queueListingImageCleanup,
   updateListing,
   updateListingImage,
   withListingLock,
@@ -122,7 +122,7 @@ const applyListingImageChanges = async (
   for (const image of currentImages) {
     if (!retainedIds.has(image.id)) {
       await deleteListingImage(client, listingId, image.id)
-      await queueListingImageCleanup(client, image.imagePath)
+      await queueImageCleanup(client, image.imagePath)
     }
   }
 
@@ -136,7 +136,7 @@ const applyListingImageChanges = async (
         displayOrder: image.displayOrder,
       })
       if (image.objectKey !== undefined) {
-        await queueListingImageCleanup(client, existing.imagePath)
+        await queueImageCleanup(client, existing.imagePath)
       }
     } else {
       await createListingImage(client, listingId, {
