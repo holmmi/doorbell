@@ -84,6 +84,165 @@ const getInfo = (authorization?: string, query = '') =>
       authorization === undefined ? {} : { Authorization: authorization },
   })
 
+const patchInfo = (
+  body: unknown,
+  authorization: string | undefined,
+  query = ''
+) =>
+  fetch(`${baseUrl}/api/user/info${query}`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(authorization === undefined ? {} : { Authorization: authorization }),
+    },
+    ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+  })
+
+for (const user of [tenant, landlord]) {
+  void test(`profile updates return only public fields for a ${user.role}`, async (t) => {
+    const changes = {
+      firstName: "Ada's new name",
+      lastName: 'Example',
+      phone: '+358409999999',
+      picturePath: 'profiles/new.png',
+    }
+    const updated = { ...user, ...changes }
+    const query = t.mock.method(
+      pool,
+      'query',
+      (sql: string, values: unknown[]) => {
+        assert.match(sql, /UPDATE "user"/)
+        assert.match(sql, /WHERE id = \$1/)
+        assert.deepEqual(values, [user.id, ...Object.values(changes)])
+        assert.ok(!sql.includes(changes.firstName))
+        return Promise.resolve({
+          rows: [{ ...updated, password: 'private', internalNote: 'private' }],
+        })
+      }
+    )
+    const response = await patchInfo(
+      changes,
+      `Bearer ${createAccessToken(user.id)}`
+    )
+
+    assert.equal(response.status, 200)
+    assert.deepEqual(await response.json(), updated)
+    assert.equal(query.mock.callCount(), 1)
+  })
+}
+
+void test('profile updates strip protected fields and use only the token subject', async (t) => {
+  const query = t.mock.method(
+    pool,
+    'query',
+    (sql: string, values: unknown[]) => {
+      assert.match(sql, /SET first_name = \$2\s+WHERE id = \$1/)
+      assert.deepEqual(values, [tenant.id, 'Updated'])
+      return Promise.resolve({ rows: [{ ...tenant, firstName: 'Updated' }] })
+    }
+  )
+  const token = jwt.sign(
+    { userId: landlord.id, role: landlord.role },
+    testJwtSecret,
+    { algorithm: 'HS256', subject: tenant.id, expiresIn: '1h' }
+  )
+  const response = await patchInfo(
+    {
+      firstName: 'Updated',
+      id: landlord.id,
+      userId: landlord.id,
+      role: 'LANDLORD',
+      email: 'other@example.com',
+      password: 'changed-password',
+      passwordHash: 'changed-hash',
+      first_name: 'Ignored',
+    },
+    `Bearer ${token}`,
+    `?id=${landlord.id}&userId=${landlord.id}`
+  )
+
+  assert.equal(response.status, 200)
+  assert.deepEqual(await response.json(), { ...tenant, firstName: 'Updated' })
+  assert.equal(query.mock.callCount(), 1)
+})
+
+for (const field of ['phone', 'picturePath'] as const) {
+  void test(`profile updates can clear only ${field}`, async (t) => {
+    const column = field === 'phone' ? 'phone' : 'picture_path'
+    t.mock.method(pool, 'query', (sql: string, values: unknown[]) => {
+      assert.ok(sql.includes(`SET ${column} = $2\n`))
+      assert.deepEqual(values, [landlord.id, null])
+      return Promise.resolve({ rows: [{ ...landlord, [field]: null }] })
+    })
+    const response = await patchInfo(
+      { [field]: null },
+      `Bearer ${createAccessToken(landlord.id)}`
+    )
+
+    assert.equal(response.status, 200)
+    assert.deepEqual(await response.json(), { ...landlord, [field]: null })
+  })
+}
+
+const invalidUpdates: [string, unknown][] = [
+  ['missing body', undefined],
+  ['empty object', {}],
+  ['unknown fields only', { unknown: 'value' }],
+  [
+    'protected fields only',
+    { id: '42', role: 'TENANT', email: 'a@b.com', password: 'password' },
+  ],
+  ['array', []],
+  ...['firstName', 'lastName', 'phone', 'picturePath'].flatMap(
+    (field): [string, unknown][] =>
+      ['', 42, false, [], {}].map((value) => [
+        `invalid ${field}: ${JSON.stringify(value)}`,
+        { firstName: 'Valid', [field]: value },
+      ])
+  ),
+  ['null first name', { firstName: null }],
+  ['null last name', { lastName: null }],
+]
+
+for (const [description, body] of invalidUpdates) {
+  void test(`profile updates reject ${description} with validation issues`, async (t) => {
+    const query = stubUserLookup(t, [tenant])
+    const response = await patchInfo(
+      body,
+      `Bearer ${createAccessToken(tenant.id)}`
+    )
+    const result = (await response.json()) as {
+      errors: { code: string; path: unknown[]; message: string }[]
+    }
+
+    assert.equal(response.status, 400)
+    assert.ok(result.errors.length > 0)
+    for (const issue of result.errors) {
+      assert.equal(typeof issue.code, 'string')
+      assert.ok(Array.isArray(issue.path))
+      assert.equal(typeof issue.message, 'string')
+    }
+    assert.equal(query.mock.callCount(), 0)
+  })
+}
+
+for (const body of ['null', '"text"', '42', '{']) {
+  void test(`profile updates reject invalid JSON body ${body}`, async (t) => {
+    const query = stubUserLookup(t, [tenant])
+    const response = await fetch(`${baseUrl}/api/user/info`, {
+      method: 'PATCH',
+      headers: {
+        Authorization: `Bearer ${createAccessToken(tenant.id)}`,
+        'Content-Type': 'application/json',
+      },
+      body,
+    })
+    assert.equal(response.status, 400)
+    assert.deepEqual(await response.json(), { error: 'error.request.invalid' })
+    assert.equal(query.mock.callCount(), 0)
+  })
+}
+
 for (const user of [tenant, landlord]) {
   void test(`user info returns the ${user.role} account with its stored profile values`, async (t) => {
     const query = stubUserLookup(t, [tenant, landlord])
@@ -185,6 +344,15 @@ const invalidAuthorization: [string, string | undefined][] = [
 ]
 
 for (const [description, authorization] of invalidAuthorization) {
+  void test(`profile updates reject ${description} without querying the database`, async (t) => {
+    const query = stubUserLookup(t, [tenant, landlord])
+    const response = await patchInfo({ firstName: 'Updated' }, authorization)
+
+    assert.equal(response.status, 401)
+    assert.deepEqual(await response.json(), unauthorized)
+    assert.equal(query.mock.callCount(), 0)
+  })
+
   void test(`user info rejects ${description} without querying the database`, async (t) => {
     const query = stubUserLookup(t, [tenant, landlord])
     const response = await getInfo(authorization)
@@ -229,4 +397,30 @@ void test('user info returns the generic server error when the database fails', 
   assert.equal(response.status, 500)
   assert.deepEqual(await response.json(), { error: 'error.server.unexpected' })
   assert.equal(query.mock.callCount(), 1)
+})
+
+void test('profile updates reject a deleted account', async (t) => {
+  const query = stubUserLookup(t, [])
+  const response = await patchInfo(
+    { firstName: 'Updated' },
+    `Bearer ${createAccessToken(tenant.id)}`
+  )
+
+  assert.equal(response.status, 401)
+  assert.deepEqual(await response.json(), unauthorized)
+  assert.equal(query.mock.callCount(), 1)
+})
+
+void test('profile updates return the generic server error when the database fails', async (t) => {
+  t.mock.method(console, 'error', () => {})
+  t.mock.method(pool, 'query', () =>
+    Promise.reject(new Error('private-database-error'))
+  )
+  const response = await patchInfo(
+    { phone: null },
+    `Bearer ${createAccessToken(tenant.id)}`
+  )
+
+  assert.equal(response.status, 500)
+  assert.deepEqual(await response.json(), { error: 'error.server.unexpected' })
 })

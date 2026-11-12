@@ -34,6 +34,10 @@ export interface RegistrationInput {
   password: string
 }
 
+export type UpdateUserInfoInput = Partial<
+  Pick<UserInfo, 'firstName' | 'lastName' | 'phone' | 'picturePath'>
+>
+
 export interface CreatedUser {
   id: string
   firstName: string

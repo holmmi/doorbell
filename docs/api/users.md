@@ -3,11 +3,12 @@
 All routes are under `/api/user`. Send JSON request bodies with
 `Content-Type: application/json`.
 
-| Method | Path                 | Authentication | Purpose                  |
-| ------ | -------------------- | -------------- | ------------------------ |
-| POST   | `/api/user/register` | Public         | Create an account        |
-| POST   | `/api/user/login`    | Public         | Obtain an access token   |
-| GET    | `/api/user/info`     | Bearer token   | Read the current account |
+| Method | Path                 | Authentication | Purpose                    |
+| ------ | -------------------- | -------------- | -------------------------- |
+| POST   | `/api/user/register` | Public         | Create an account          |
+| POST   | `/api/user/login`    | Public         | Obtain an access token     |
+| GET    | `/api/user/info`     | Bearer token   | Read the current account   |
+| PATCH  | `/api/user/info`     | Bearer token   | Update the current profile |
 
 ## Register
 
@@ -101,12 +102,48 @@ Missing, invalid or expired tokens return HTTP 401 with
 `{"error":"error.authentication.unauthorized"}`. A valid token for an account
 that no longer exists returns the same response.
 
+## Update the current profile
+
+`PATCH /api/user/info` requires a bearer token and accepts either account role.
+Send a JSON object with at least one of these optional fields:
+
+```json
+{
+  "firstName": "Ada",
+  "lastName": "Lovelace",
+  "phone": "+358401234567",
+  "picturePath": null
+}
+```
+
+`firstName` and `lastName` must be nonempty strings. `phone` and `picturePath`
+must be nonempty strings or `null`. Omitted fields remain unchanged; explicit
+`null` clears the phone number or picture reference. `picturePath` is a stored
+image reference; this endpoint does not upload or delete images.
+
+Unknown fields are stripped. The token subject exclusively selects the account;
+body fields and query parameters cannot select another account or change its
+ID, role, email, or password. An empty object or a body containing only unknown
+or protected fields returns HTTP 400 with an `errors` array of Zod issues.
+Invalid supported fields use the same validation error format.
+
+Success returns HTTP 200 with the updated seven-field object documented for
+`GET /api/user/info`. Updates persist and appear in subsequent GET responses.
+For example, sending only `{"phone":null}` clears the phone number and preserves
+all other account fields.
+
+Missing, invalid or expired tokens and tokens for deleted accounts return
+HTTP 401 with `{"error":"error.authentication.unauthorized"}`. Invalid JSON,
+including a JSON `null` body, returns HTTP 400 with
+`{"error":"error.request.invalid"}`.
+
 ## Errors
 
 Request schema validation failures return HTTP 400 with an `errors` array of
 Zod issues: `{ "errors": [...] }`. Each issue includes its `code`, `path`
 and `message`; additional fields depend on the validation rule. This applies
-to missing or invalid registration/login fields, including password limits.
+to missing or invalid registration/login fields, including password limits,
+and invalid profile updates or updates without supported changes.
 
 Other errors use `{ "error": "<translation-key>" }`:
 

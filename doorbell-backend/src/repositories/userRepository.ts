@@ -4,6 +4,7 @@ import { pool } from '../config/database.js'
 import type {
   CreatedUser,
   RegistrationInput,
+  UpdateUserInfoInput,
   UserCredentials,
   UserInfo,
 } from '../types/user.js'
@@ -57,6 +58,38 @@ export const findUserInfoById = async (
   userId: string
 ): Promise<UserInfo | undefined> => {
   const result = await pool.query<UserInfo>(findUserInfoByIdQuery, [userId])
+
+  return result.rows[0]
+}
+
+export const updateUserInfoById = async (
+  userId: string,
+  input: UpdateUserInfoInput
+): Promise<UserInfo | undefined> => {
+  const columns = {
+    firstName: 'first_name',
+    lastName: 'last_name',
+    phone: 'phone',
+    picturePath: 'picture_path',
+  } as const
+  const values: (string | null)[] = [userId]
+  const assignments: string[] = []
+
+  for (const field of Object.keys(columns) as (keyof typeof columns)[]) {
+    if (input[field] !== undefined) {
+      values.push(input[field])
+      assignments.push(`${columns[field]} = $${values.length}`)
+    }
+  }
+
+  const result = await pool.query<UserInfo>(
+    `UPDATE "user"
+     SET ${assignments.join(', ')}
+     WHERE id = $1
+     RETURNING id, role, first_name AS "firstName", last_name AS "lastName",
+       email, phone, picture_path AS "picturePath"`,
+    values
+  )
 
   return result.rows[0]
 }
