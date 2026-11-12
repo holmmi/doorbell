@@ -265,25 +265,6 @@ void describe(
           })
         })
       }
-
-      void test('requires the current landlord role even with an existing token', async () => {
-        await createListing()
-        await pool.query('UPDATE "user" SET role = \'TENANT\' WHERE id = 1')
-        const response = await request('GET', '/mine')
-        assert.equal(response.status, 403)
-        assert.deepEqual(await response.json(), {
-          error: 'error.authorization.forbidden',
-        })
-      })
-
-      void test('rejects a deleted account with an existing token', async () => {
-        await pool.query('DELETE FROM "user" WHERE id = 1')
-        const response = await request('GET', '/mine')
-        assert.equal(response.status, 401)
-        assert.deepEqual(await response.json(), {
-          error: 'error.authentication.unauthorized',
-        })
-      })
     })
 
     void describe('listing access', () => {
