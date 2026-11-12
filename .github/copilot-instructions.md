@@ -163,7 +163,7 @@ docker compose ps
 docker compose logs flyway
 ```
 
-Flyway waits for the `db` healthcheck, mounts `migrations/` read-only, and
+Flyway waits for the `db` healthcheck, mounts `migrations/sql/` read-only, and
 exits after applying pending migrations. S3Mock creates the `doorbell` bucket
 automatically, stores data in the `s3mock_data` volume mounted at its writable
 `/s3mockroot` path, and exposes its S3-compatible API at
@@ -229,7 +229,7 @@ Both runtime images include `curl` for future healthchecks.
 - Frontend assets are under `doorbell-frontend/src/assets/`; static public
   files are under `doorbell-frontend/public/`.
 - Flyway migration files use the `V<version>__<description>.sql` naming
-  convention and are mounted from `migrations/` by Docker Compose.
+  convention and are mounted from `migrations/sql/` by Docker Compose.
 - Before submitting a change, run the CI sequence. If a change affects only
   one workspace, run its narrower lint/build or backend typecheck as a quick
   feedback loop, then still run root lint and build before finishing.

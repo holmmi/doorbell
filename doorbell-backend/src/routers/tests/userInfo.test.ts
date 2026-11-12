@@ -16,6 +16,7 @@ Object.assign(process.env, {
   DB_NAME: 'user_info_test',
   DB_USER: 'user_info_test',
   DB_PASSWORD: 'test-only-password',
+  DB_SSL: 'false',
   DOTENV_CONFIG_PATH: '__test_missing_env__',
 })
 

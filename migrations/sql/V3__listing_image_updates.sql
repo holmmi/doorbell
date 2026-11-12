@@ -52,3 +52,4 @@ CREATE TABLE listing_image_cleanup (
 
 CREATE INDEX listing_image_cleanup_available_after_idx
     ON listing_image_cleanup (available_after);
+--
