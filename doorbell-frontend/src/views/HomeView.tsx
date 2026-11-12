@@ -14,6 +14,7 @@ import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router'
 import { ApiError } from '../api/client'
 import { getFeed } from '../api/listingClient'
+import { savePreference } from '../api/listingInteractionClient'
 import { EmptyDeck } from '../components/home/EmptyDeck'
 import { Faq } from '../components/home/Faq'
 import { FilterBar } from '../components/home/FilterBar'
@@ -49,7 +50,7 @@ const matchesFilters = (listing: HomeListing, filters: FeedFilters) =>
 
 export const HomeView = () => {
   const { t } = useTranslation()
-  const { user, status } = useAuth()
+  const { user, status, logout } = useAuth()
   const viewer = status === 'loading' ? 'LOADING' : (user?.role ?? 'ANONYMOUS')
   const [today] = useState(() => toIsoDate(new Date()))
   const [listings, setListings] = useState<HomeListing[] | null>(null)
@@ -100,10 +101,28 @@ export const HomeView = () => {
       setSignUpOpen(true)
       return
     }
-    // TODO: save with POST /api/listing/:listingId/preference once the backend
-    // supports it. Until then decisions only last until the page reloads.
+    // Remove the card right away so the deck stays responsive. Anonymous
+    // dislikes are not saved and only last until the page reloads.
     setDecided((current) => new Set(current).add(listing.id))
     setLikeNotice(liked)
+    if (viewer !== 'TENANT') return
+
+    savePreference(listing.id, liked).catch((error: unknown) => {
+      if (error instanceof ApiError && error.status === 401) {
+        logout()
+        return
+      }
+      setErrorCode(errorCodeOf(error))
+      if (liked) setLikeNotice(false)
+      // A 409 means the listing was already reviewed or can no longer be
+      // reviewed, so retrying would not help. Otherwise return the card.
+      if (error instanceof ApiError && error.status === 409) return
+      setDecided((current) => {
+        const next = new Set(current)
+        next.delete(listing.id)
+        return next
+      })
+    })
   }
 
   return (
