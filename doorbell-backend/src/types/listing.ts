@@ -1,4 +1,13 @@
 import type { UserRole } from './user.js'
+import type { z } from 'zod'
+import type { listingFeedQuerySchema } from '../schemas/listing.js'
+
+export type ListingFeedFilters = z.infer<typeof listingFeedQuerySchema>
+
+export interface ListingFilterOptions {
+  locations: Array<{ city: string; neighborhoods: string[] }>
+  maxPrices: string[]
+}
 
 export const rooms = [
   'STUDIO',
