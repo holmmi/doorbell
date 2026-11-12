@@ -93,6 +93,10 @@ Success returns HTTP 200 with this top-level object:
 either their stored string values or `null`. `picturePath` is a stored image
 reference. The response contains only these seven public account fields.
 
+To retrieve the current landlord's published and unpublished listings, use
+[`GET /api/listing/mine`](listings.md#my-listings) with the same bearer token.
+Listings are not included in the account response.
+
 Missing, invalid or expired tokens return HTTP 401 with
 `{"error":"error.authentication.unauthorized"}`. A valid token for an account
 that no longer exists returns the same response.

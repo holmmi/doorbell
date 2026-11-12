@@ -53,6 +53,23 @@ listing responses.
 ]
 ```
 
+## My listings
+
+`GET /api/listing/mine` requires `Authorization: Bearer <access-token>` from
+a current `LANDLORD` account. It returns all listings owned by that account,
+including published and unpublished listings, in ascending ID order. There
+is no pagination or feed limit. The owner is selected only from the token;
+query parameters cannot select another account.
+
+Success returns HTTP 200 with an array of the same listing detail objects as
+`GET /api/listing/:listingId`, including `published`, `ready` and finalized
+`images` sorted by display order. Image URLs expire after 900 seconds; fetch
+the list again to refresh them. An account with no listings receives `[]`.
+
+Missing, invalid or expired tokens and deleted accounts return HTTP 401 with
+`{"error":"error.authentication.unauthorized"}`. Accounts without the landlord
+role return HTTP 403 with `{"error":"error.authorization.forbidden"}`.
+
 ## Database migration
 
 Apply migration `V3__listing_image_updates.sql` before running the updated

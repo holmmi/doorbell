@@ -3,6 +3,7 @@ import type { RequestHandler } from 'express'
 import {
   createListing,
   findListingFeed,
+  findOwnedListings,
   publishListing,
   registerListingImageUpload,
   withOwnedListing,
@@ -62,6 +63,14 @@ export const getRentalListingFeed: RequestHandler = async (
   )
   const result = await Promise.all(listings.map(listingFeedResponse))
   response.json(result)
+}
+
+export const getMyRentalListings: RequestHandler = async (
+  request,
+  response
+) => {
+  const listings = await findOwnedListings(request.auth?.userId as string)
+  response.json(await Promise.all(listings.map(listingResponse)))
 }
 
 export const updateRentalListing: RequestHandler = async (
