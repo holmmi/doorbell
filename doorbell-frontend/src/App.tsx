@@ -62,11 +62,8 @@ const App = () => {
                     path="/listing/new"
                     element={page(CreateListingView)}
                   />
+                  <Route path="/likes" element={page(LikesView)} />
                 </Route>
-              </Route>
-              <Route element={<ProtectedRoute role="LANDLORD" />}>
-                <Route path="/listing/new" element={page(CreateListingView)} />
-                <Route path="/likes" element={page(LikesView)} />
               </Route>
             </Routes>
           </InteractionsProvider>
