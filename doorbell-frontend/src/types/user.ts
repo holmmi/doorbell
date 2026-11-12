@@ -26,3 +26,12 @@ export interface UserInfo {
   phone: string | null
   picturePath: string | null
 }
+
+// PATCH /api/user/info body. Send only changed fields; null clears the phone
+// number or removes the picture.
+export interface ProfileUpdate {
+  firstName?: string
+  lastName?: string
+  phone?: string | null
+  picturePath?: null
+}
