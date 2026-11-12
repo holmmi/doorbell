@@ -1,18 +1,9 @@
 import { Box, Divider, Typography } from '@mui/material'
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { brand, shadows } from '../../theme/tokens'
-import type { Room } from '../../types/listing'
-
-export type ListingPreview = {
-  neighborhood: string
-  city: string
-  availableFrom: string
-  rent: number
-  squareMeters: number
-  rooms: Room
-  extraCosts: string
-  imageUrl?: string
-}
+import type { ListingPreview } from '../../types/listing'
+import { formatDayMonth, toIsoDate } from '../../utils/format'
 
 const cardSx = {
   bgcolor: 'background.paper',
@@ -62,13 +53,6 @@ const priceRowSx = {
   flexWrap: 'wrap',
 } as const
 
-// "YYYY-MM-DD" in the user's own time zone, comparable with date inputs.
-const localToday = () => {
-  const now = new Date()
-  now.setMinutes(now.getMinutes() - now.getTimezoneOffset())
-  return now.toISOString().slice(0, 10)
-}
-
 export const ListingPreviewCard = ({
   listing,
 }: {
@@ -76,6 +60,7 @@ export const ListingPreviewCard = ({
 }) => {
   const { t, i18n } = useTranslation()
   const locale = i18n.language
+  const [today] = useState(() => toIsoDate(new Date()))
 
   const price = new Intl.NumberFormat(locale, {
     style: 'currency',
@@ -86,13 +71,13 @@ export const ListingPreviewCard = ({
     maximumFractionDigits: 1,
   }).format(listing.squareMeters)
   const available =
-    listing.availableFrom > localToday()
+    listing.availableFrom > today
       ? t('listing.availableOn', {
-          date: new Date(
-            `${listing.availableFrom}T00:00:00`
-          ).toLocaleDateString(locale, { month: 'long', day: 'numeric' }),
+          date: formatDayMonth(listing.availableFrom, locale),
         })
       : t('listing.availableNow')
+  // Same rule as the renter feed: the tag shows on the day it was listed.
+  const isNew = (listing.createdAt ?? today) === today
 
   return (
     <Box component="article" sx={cardSx}>
@@ -100,9 +85,11 @@ export const ListingPreviewCard = ({
         {listing.imageUrl ? (
           <Box component="img" src={listing.imageUrl} alt="" sx={photoSx} />
         ) : null}
-        <Box component="span" sx={newTagSx}>
-          {t('listing.newToday')}
-        </Box>
+        {isNew ? (
+          <Box component="span" sx={newTagSx}>
+            {t('listing.newToday')}
+          </Box>
+        ) : null}
       </Box>
 
       <Box

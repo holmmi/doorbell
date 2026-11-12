@@ -65,7 +65,8 @@ export const uploadImage = async (
   }
 }
 
-export const saveListingImages = (
+// Replaces the listing details and, when given, the complete image set.
+export const updateListing = (
   listingId: string,
   input: ListingInput,
   images: ListingImageInput[]

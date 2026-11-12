@@ -30,6 +30,10 @@ const CreateListingView = lazyView(
   'CreateListingView'
 )
 const LikesView = lazyView(() => import('./views/LikesView'), 'LikesView')
+const EditListingView = lazyView(
+  () => import('./views/EditListingView'),
+  'EditListingView'
+)
 
 const page = (View: ComponentType) => (
   <Suspense fallback={<PageLoader />}>
@@ -67,6 +71,10 @@ const App = () => {
               <Route element={<ProtectedRoute role="LANDLORD" />}>
                 <Route path="/listing/new" element={page(CreateListingView)} />
                 <Route path="/likes" element={page(LikesView)} />
+                <Route
+                  path="/listing/:listingId/edit"
+                  element={page(EditListingView)}
+                />
               </Route>
             </Routes>
           </InteractionsProvider>
