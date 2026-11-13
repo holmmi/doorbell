@@ -24,6 +24,6 @@ export interface UserInfo {
   lastName: string
   email: string
   phone: string | null
-  picturePath: string | null
+  pictureKey: string | null
   pictureUrl: string | null
 }

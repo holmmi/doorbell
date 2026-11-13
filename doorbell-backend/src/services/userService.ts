@@ -38,12 +38,12 @@ export const toUserInfoResponse = async (
   lastName: user.lastName,
   email: user.email,
   phone: user.phone,
-  picturePath: user.picturePath,
+  pictureKey: user.pictureKey,
   // Older versions accepted arbitrary references; never sign foreign objects.
   pictureUrl:
-    user.picturePath && isProfilePictureKey(user.picturePath, user.id)
+    user.pictureKey && isProfilePictureKey(user.pictureKey, user.id)
       ? await withPictureStorage(() =>
-          createPresignedImageDownload(user.picturePath as string)
+          createPresignedImageDownload(user.pictureKey as string)
         )
       : null,
 })
@@ -64,8 +64,8 @@ export const presignUserPicture = (userId: string, contentType: string) =>
 
 export const updateUserProfile = (userId: string, input: UpdateUserInfoInput) =>
   withUserLock(userId, async (client, current) => {
-    const nextPicture = input.picturePath
-    if (nextPicture !== undefined && nextPicture !== current.picturePath) {
+    const nextPicture = input.pictureKey
+    if (nextPicture !== undefined && nextPicture !== current.pictureKey) {
       if (nextPicture !== null) {
         if (!isProfilePictureKey(nextPicture, userId)) {
           throw new RequestError(400, 'error.user.picture.invalidKey')
@@ -80,10 +80,10 @@ export const updateUserProfile = (userId: string, input: UpdateUserInfoInput) =>
         )
       }
       if (
-        current.picturePath &&
-        isProfilePictureKey(current.picturePath, userId)
+        current.pictureKey &&
+        isProfilePictureKey(current.pictureKey, userId)
       ) {
-        await queueImageCleanup(client, current.picturePath)
+        await queueImageCleanup(client, current.pictureKey)
       }
     }
     const user = await updateUserInfoById(userId, input, client)

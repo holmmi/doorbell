@@ -47,7 +47,7 @@ export const cleanUpImages = async (
       // lock. A retired key cannot be reattached. Also protect legacy references
       // that predate staging, or an accidentally queued currently saved key.
       const referenced = await client.query(
-        `SELECT 1 FROM "user" WHERE picture_path = $1
+        `SELECT 1 FROM "user" WHERE picture_key = $1
          UNION ALL SELECT 1 FROM rental_listing_image WHERE image_path = $1
          LIMIT 1`,
         [objectKey]

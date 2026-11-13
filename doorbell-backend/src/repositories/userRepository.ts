@@ -19,7 +19,7 @@ const findUserInfoByIdQuery = `
     last_name AS "lastName",
     email,
     phone,
-    picture_path AS "picturePath"
+    picture_key AS "pictureKey"
   FROM "user"
   WHERE id = $1
 `
@@ -72,7 +72,7 @@ export const updateUserInfoById = async (
     firstName: 'first_name',
     lastName: 'last_name',
     phone: 'phone',
-    picturePath: 'picture_path',
+    pictureKey: 'picture_key',
   } as const
   const values: (string | null)[] = [userId]
   const assignments: string[] = []
@@ -89,7 +89,7 @@ export const updateUserInfoById = async (
      SET ${assignments.join(', ')}
      WHERE id = $1
      RETURNING id, role, first_name AS "firstName", last_name AS "lastName",
-       email, phone, picture_path AS "picturePath"`,
+       email, phone, picture_key AS "pictureKey"`,
     values
   )
 

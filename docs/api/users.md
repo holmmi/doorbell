@@ -30,7 +30,7 @@ strings, `email` must be a valid email address, and `role` must be `TENANT`
 or `LANDLORD`. The password must contain at least eight characters and at
 most 72 UTF-8 bytes. Multibyte characters count toward that byte limit.
 Unknown request fields are stripped by the request schema. Registration
-leaves `phone` and `picturePath` unset (`null`).
+leaves `phone` and `pictureKey` unset (`null`).
 
 Success returns HTTP 201 with the plain text body `Created`. Log in to obtain
 an access token. An email address that is already registered returns HTTP 409
@@ -86,25 +86,24 @@ Success returns HTTP 200 with this top-level object:
   "lastName": "Example",
   "email": "ada@example.com",
   "phone": null,
-  "picturePath": null,
+  "pictureKey": null,
   "pictureUrl": null
 }
 ```
 
 `id` is a decimal string to preserve PostgreSQL `BIGINT` precision. `role` is
-`TENANT` or `LANDLORD`. `phone` and `picturePath` are always present and are
-either their stored string values or `null`. `picturePath` is a stored image
-object key. The response extends the previous seven-field contract with
-`pictureUrl`: a presigned GET URL valid for 900 seconds, or `null` when there is
-no picture. Signed URLs are generated for each GET/PATCH response and are never
+`TENANT` or `LANDLORD`. `phone` and `pictureKey` are always present and are
+either their stored string values or `null`. `pictureKey` is a stored image
+object key. `pictureUrl` is a presigned GET URL valid for 900 seconds, or `null`
+when there is no picture. Signed URLs are generated for each GET/PATCH response and are never
 stored in the database. Fetch `/api/user/info` again to refresh an expired URL;
-do not save `pictureUrl` back as `picturePath`.
+do not save `pictureUrl` back as `pictureKey`.
 
 Legacy references saved before the upload API are preserved on unrelated
 updates, but references outside the account's `users/<id>/` namespace or without
 a simple PNG/JPG/JPEG filename receive
 `pictureUrl: null` and are never deleted by this flow. Replace them using the
-upload flow below or clear them with `picturePath: null`.
+upload flow below or clear them with `pictureKey: null`.
 
 To retrieve the current landlord's published and unpublished listings, use
 [`GET /api/listing/mine`](listings.md#my-listings) with the same bearer token.
@@ -124,13 +123,13 @@ Send a JSON object with at least one of these optional fields:
   "firstName": "Ada",
   "lastName": "Lovelace",
   "phone": "+358401234567",
-  "picturePath": null
+  "pictureKey": null
 }
 ```
 
-`firstName` and `lastName` must be nonempty strings. `phone` and `picturePath`
+`firstName` and `lastName` must be nonempty strings. `phone` and `pictureKey`
 must be nonempty strings or `null`. Omitted fields remain unchanged; explicit
-`null` clears the phone number or picture. A new `picturePath` must be an
+`null` clears the phone number or picture. A new `pictureKey` must be an
 unexpired, backend-issued staged upload for the authenticated account, verified
 in storage before any profile fields are committed. Keeping the currently saved
 key unchanged is a no-op for picture finalization; omitting it preserves the
@@ -189,14 +188,14 @@ parameter, and listing images and other users' pictures cannot be attached.
    URL nor uploading the bytes changes the saved profile picture. If the PUT
    URL expires, request a new upload and use its new key.
 
-3. Finalize through profile Save, using the stable `objectKey` as `picturePath`:
+3. Finalize through profile Save, using the stable `objectKey` as `pictureKey`:
 
    ```http
    PATCH /api/user/info
    Authorization: Bearer <access-token>
    Content-Type: application/json
 
-   {"firstName":"Ada","picturePath":"users/7/8e952879-0e92-4972-841f-940603b0ead3.png"}
+   {"firstName":"Ada","pictureKey":"users/7/8e952879-0e92-4972-841f-940603b0ead3.png"}
    ```
 
    HTTP 200 returns the complete profile:
@@ -209,7 +208,7 @@ parameter, and listing images and other users' pictures cannot be attached.
      "lastName": "Example",
      "email": "ada@example.com",
      "phone": null,
-     "picturePath": "users/7/8e952879-0e92-4972-841f-940603b0ead3.png",
+     "pictureKey": "users/7/8e952879-0e92-4972-841f-940603b0ead3.png",
      "pictureUrl": "https://storage.example.com/bucket/users/7/8e952879-0e92-4972-841f-940603b0ead3.png?<signed-get-query>"
    }
    ```
@@ -222,12 +221,14 @@ parameter, and listing images and other users' pictures cannot be attached.
    previously retired keys are rejected. A failed verification or database save
    preserves all previously committed profile fields and leaves an unexpired
    staged upload available for retry. A successful save consumes the staging
-   record. Re-sending the currently saved key is permitted.
+   record. The account retains the selected key in `user.picture_key`, while
+   `user_picture_upload.object_key` only tracks pending uploads. Re-sending the
+   currently saved key is permitted.
 
 Display `pictureUrl` directly and refresh it by reading the profile after its
 900-second lifetime. To replace the picture, repeat all three steps with a new
-upload. To remove it, send `{"picturePath":null}` to PATCH; the response contains
-both `picturePath: null` and `pictureUrl: null`.
+upload. To remove it, send `{"pictureKey":null}` to PATCH; the response contains
+both `pictureKey: null` and `pictureUrl: null`.
 
 Retired objects enter the durable cleanup queue in the same transaction as the
 profile update and are deleted only after commit, with at least a 15-minute

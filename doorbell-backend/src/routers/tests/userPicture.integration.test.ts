@@ -71,8 +71,8 @@ const upload = async (
   assert.equal(response.status, 200)
 }
 
-const save = (picturePath: string | null, fields = {}, userId = '1') =>
-  request('PATCH', 'info', { ...fields, picturePath }, userId)
+const save = (pictureKey: string | null, fields = {}, userId = '1') =>
+  request('PATCH', 'info', { ...fields, pictureKey }, userId)
 
 const read = async (userId = '1') => {
   const response = await request('GET', 'info', undefined, userId)
@@ -135,7 +135,7 @@ void describe('profile picture lifecycle', { concurrency: false }, () => {
         )
         assert.equal(response.status, 200)
         const saved = (await response.json()) as UserInfoResponse
-        assert.equal(saved.picturePath, first.objectKey)
+        assert.equal(saved.pictureKey, first.objectKey)
         assert.equal(saved.firstName, 'Updated')
         assert.equal(saved.phone, '123')
         assert.deepEqual(
@@ -147,7 +147,7 @@ void describe('profile picture lifecycle', { concurrency: false }, () => {
             'lastName',
             'email',
             'phone',
-            'picturePath',
+            'pictureKey',
             'pictureUrl',
           ].sort()
         )
@@ -167,7 +167,7 @@ void describe('profile picture lifecycle', { concurrency: false }, () => {
         const partial = await request('PATCH', 'info', { phone: null }, userId)
         assert.equal(partial.status, 200)
         assert.equal(
-          ((await partial.json()) as UserInfoResponse).picturePath,
+          ((await partial.json()) as UserInfoResponse).pictureKey,
           first.objectKey
         )
         assert.equal((await save(first.objectKey, {}, userId)).status, 200)
@@ -194,12 +194,12 @@ void describe('profile picture lifecycle', { concurrency: false }, () => {
         const removed = await save(null, {}, userId)
         assert.equal(removed.status, 200)
         const cleared = (await removed.json()) as UserInfoResponse
-        assert.equal(cleared.picturePath, null)
+        assert.equal(cleared.pictureKey, null)
         assert.equal(cleared.pictureUrl, null)
         await makeCleanupDue()
         await cleanup()
         await assertMissing(second.objectKey)
-        assert.equal((await read()).picturePath, null)
+        assert.equal((await read()).pictureKey, null)
       })
     }
   }
@@ -288,7 +288,7 @@ void describe('profile picture lifecycle', { concurrency: false }, () => {
         'error.user.picture.invalidKey'
       )
       const current = await read()
-      assert.equal(current.picturePath, original.objectKey)
+      assert.equal(current.pictureKey, original.objectKey)
       assert.equal(current.firstName, 'Owner')
       assert.equal(current.phone, null)
       assert.equal(
@@ -321,7 +321,7 @@ void describe('profile picture lifecycle', { concurrency: false }, () => {
         400,
         'error.user.picture.invalidObject'
       )
-      assert.equal((await read()).picturePath, original.objectKey)
+      assert.equal((await read()).pictureKey, original.objectKey)
       assert.equal((await read()).lastName, 'One')
     }
     assert.equal(
@@ -357,7 +357,7 @@ void describe('profile picture lifecycle', { concurrency: false }, () => {
       'error.user.picture.storageUnavailable'
     )
     mock.mock.restore()
-    assert.equal((await read()).picturePath, original.objectKey)
+    assert.equal((await read()).pictureKey, original.objectKey)
     assert.equal((await read()).firstName, 'Owner')
     assert.equal(
       (await pool.query('SELECT * FROM listing_image_cleanup')).rowCount,
@@ -390,7 +390,7 @@ void describe('profile picture lifecycle', { concurrency: false }, () => {
       process.env.S3_BUCKET = bucket
     }
     assert.equal((await read()).firstName, 'Owner')
-    assert.equal((await read()).picturePath, original.objectKey)
+    assert.equal((await read()).pictureKey, original.objectKey)
   })
 
   void test('a commit failure rolls back the profile, staging and cleanup together', async (t) => {
@@ -411,7 +411,7 @@ void describe('profile picture lifecycle', { concurrency: false }, () => {
           500,
           'error.server.unexpected'
         )
-        assert.equal((await read()).picturePath, original.objectKey)
+        assert.equal((await read()).pictureKey, original.objectKey)
         assert.equal((await read()).firstName, 'Owner')
         assert.equal((await read()).phone, null)
         assert.equal(
@@ -454,7 +454,7 @@ void describe('profile picture lifecycle', { concurrency: false }, () => {
       (await pool.query('SELECT * FROM user_picture_upload')).rowCount,
       0
     )
-    assert.equal((await read()).picturePath, saved.objectKey)
+    assert.equal((await read()).pictureKey, saved.objectKey)
     // Restart in a separate process: recovery must use only durable DB state.
     await makeCleanupDue()
     const repositoryUrl = new URL(
@@ -525,14 +525,14 @@ void describe('profile picture lifecycle', { concurrency: false }, () => {
           first.objectKey,
           second.objectKey,
         ])
-        expected.delete(current.picturePath as string)
+        expected.delete(current.pictureKey as string)
         assert.deepEqual(
           new Set(queued.rows.map((row) => row.object_key)),
           expected
         )
         await makeCleanupDue()
         await cleanup()
-        await head(current.picturePath as string)
+        await head(current.pictureKey as string)
         for (const key of expected) await assertMissing(key)
       } finally {
         await barrier.query('ROLLBACK')
@@ -543,7 +543,7 @@ void describe('profile picture lifecycle', { concurrency: false }, () => {
   }
 
   void test('legacy foreign references are neither signed nor deleted', async () => {
-    await pool.query('UPDATE "user" SET picture_path = $1 WHERE id = 1', [
+    await pool.query('UPDATE "user" SET picture_key = $1 WHERE id = 1', [
       'listings/1/protected.png',
     ])
     assert.equal((await read()).pictureUrl, null)
@@ -559,7 +559,7 @@ void describe('profile picture lifecycle', { concurrency: false }, () => {
     await pool.query(`
       CREATE FUNCTION pause_profile_removal() RETURNS trigger LANGUAGE plpgsql AS $$
       BEGIN
-        IF NEW.picture_path IS NULL THEN PERFORM pg_advisory_xact_lock(565656); END IF;
+        IF NEW.picture_key IS NULL THEN PERFORM pg_advisory_xact_lock(565656); END IF;
         RETURN NEW;
       END $$;
       CREATE TRIGGER pause_profile_removal BEFORE UPDATE ON "user"
@@ -588,7 +588,7 @@ void describe('profile picture lifecycle', { concurrency: false }, () => {
       const [removed, stale] = await Promise.all(pending)
       assert.equal(removed.status, 200)
       await assertError(stale, 400, 'error.user.picture.invalidKey')
-      assert.equal((await read()).picturePath, null)
+      assert.equal((await read()).pictureKey, null)
       assert.equal((await read()).firstName, 'Owner')
       await makeCleanupDue()
       await cleanup()
