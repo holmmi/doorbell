@@ -22,6 +22,47 @@ ascending ID order.
 An invalid bearer token returns HTTP 401. Authenticated requests may use any
 valid user role; this endpoint is not restricted to landlords.
 
+### Feed filters
+
+All filters are optional and combine with AND. Eligibility and filtering happen
+in the database **before** ascending ID ordering and the 2/10 listing limit.
+Omitting filters preserves the unfiltered feed behavior.
+
+```http
+GET /api/listing?city=Helsinki&neighborhood=Kallio&maxPrice=1500&minSize=30
+```
+
+| Query parameter | Meaning |
+| --------------- | ------- |
+| `city` | Exact city match, ignoring case and surrounding whitespace. |
+| `neighborhood` | Exact neighborhood match within `city`, with the same normalization. Requires a nonblank `city`. |
+| `maxPrice` | Inclusive maximum monthly base rent in EUR (`monthlyPrice`); excludes `extraCosts`. |
+| `minSize` | Inclusive minimum floor area in m² (`squareMeters`), independent of `rooms`. |
+
+Blank or whitespace-only location filters are omitted. For example,
+`?city=Helsinki` selects the whole city, while
+`?city=Helsinki&neighborhood=Kallio` selects that neighborhood only. Unknown
+cities or city/neighborhood combinations return HTTP 200 with `[]`.
+Values are URL query strings; URL-encode spaces and other special characters.
+
+Numeric filters accept positive, finite decimal values with up to two decimal
+places, optionally surrounded by whitespace: for example `1250`, `1250.5` or
+`1250.50`. The maximum is `99999999.99` for `maxPrice` and `999999.99` for
+`minSize`. Zero, negative values, empty values, exponent/hex notation,
+non-numbers, excess decimal places and values above these bounds are invalid.
+Omit the frontend's zero/no-limit sentinel from requests.
+
+Invalid filters return HTTP 400 with `{ "errors": [...] }`, the existing Zod
+issue format. This includes repeated parameters, array/object values (including
+bracket notation such as `city[]` or `maxPrice[value]`) and a nonblank
+`neighborhood` without a city. Each issue includes `code`, `path` and `message`;
+the missing-city issue has `path: ["neighborhood"]`. Unknown fields are stripped.
+Invalid supplied bearer tokens still return HTTP 401 before query validation,
+using `{"error":"error.authentication.unauthorized"}` as described in
+[Users and authentication](users.md).
+
+### Feed response
+
 Each listing includes its finalized images. `imageUrl` is a pre-signed S3 GET
 URL that can be used directly as an HTML image `src`, together with the image
 ID and display order. These URLs expire after 900 seconds and must be
@@ -52,6 +93,48 @@ listing responses.
   }
 ]
 ```
+
+## Filter options
+
+`GET /api/listing/filter-options` returns HTTP 200 with listing-derived choices
+for the main view. Authentication is optional: anonymous visitors and valid
+authenticated callers of either role may access it. An invalid or expired
+supplied bearer token returns HTTP 401 with
+`{"error":"error.authentication.unauthorized"}`.
+
+```json
+{
+  "locations": [
+    { "city": "Helsinki", "neighborhoods": ["Kallio", "Kamppi"] },
+    { "city": "Tampere", "neighborhoods": ["Keskusta"] }
+  ],
+  "maxPrices": ["1250.00", "1500.00"]
+}
+```
+
+Options come from **all published listings**, independently of the feed limit
+or selected filters. They are not personalized: own listings and existing
+likes/dislikes still contribute, so swiping does not remove choices. Drafts
+never contribute. Publication and listing updates are reflected on the next
+request.
+
+Cities and their neighborhoods are trimmed, deduplicated case-insensitively
+using the same normalization as feed matching, and sorted alphabetically.
+Display text comes from listings; when casing differs, the smallest trimmed
+value in PostgreSQL's `C` collation is selected deterministically. Blank cities
+are omitted; blank neighborhoods are omitted from their city's array. A city
+without a nonblank neighborhood has `neighborhoods: []`. The same neighborhood
+name in two cities remains a separate choice under each city. Send both city
+and neighborhood to select one of these choices.
+
+`maxPrices` contains distinct actual monthly base rents, sorted numerically
+ascending and returned as decimal strings with two decimal places, matching
+listing responses. Published listings with blank location fields still
+contribute prices. There are no fixed price presets or size options; the
+frontend may define size thresholds and send them using `minSize`.
+
+An empty published dataset returns `{ "locations": [], "maxPrices": [] }`.
+The response contains only these options, without account data or storage keys.
 
 ## My listings
 
