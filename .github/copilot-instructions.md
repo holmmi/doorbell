@@ -189,9 +189,9 @@ Both runtime images include `curl` for future healthchecks.
 
 - Use arrow functions for components, hooks, and standalone helpers throughout
   the codebase. Keep class constructors and methods in their normal syntax.
-- End every text file with a newline, including SQL migrations. Root
-  `.editorconfig` enables `insert_final_newline` for editors such as WebStorm;
-  keep EditorConfig support enabled when editing this repository.
+- End every text file with a newline, including SQL migrations. Prettier handles
+  supported file types; check SQL migrations explicitly and use four-space
+  indentation. Editor extensions are optional.
 - Define foreign keys as named constraints at the end of `CREATE TABLE`, using
   `<table>_<column>_fk` names.
 - The backend loads dotenv once at the start of `src/app.ts`, using
