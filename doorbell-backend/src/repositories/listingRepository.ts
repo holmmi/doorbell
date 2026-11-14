@@ -280,13 +280,3 @@ export const consumeListingImageUpload = async (
   }
   return result.rows[0].contentType
 }
-
-export const queueListingImageCleanup = async (
-  client: PoolClient,
-  objectKey: string
-): Promise<void> => {
-  await client.query(
-    'INSERT INTO listing_image_cleanup (object_key) VALUES ($1) ON CONFLICT DO NOTHING',
-    [objectKey]
-  )
-}

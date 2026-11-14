@@ -22,8 +22,10 @@ repository uses npm workspaces:
   `src/middlewares/authenticate.ts` verifies bearer JWTs and exposes
   `request.auth.userId` to protected handlers. `GET /api/user/info` uses it
   to return the current account's public fields, including nullable phone
-  and picture path values. `PATCH /api/user/info` updates only supplied profile
-  fields for that account; explicit null clears phone or picture path.
+  and picture key values, plus a nullable 15-minute signed `pictureUrl`.
+  `POST /api/user/picture/presign` stages a unique upload for either role.
+  `PATCH /api/user/info` updates only supplied profile
+  fields for that account; explicit null clears phone or picture key.
   A token for a missing account receives HTTP 401.
 - `migrations/`: Flyway SQL migrations for the PostgreSQL database.
 - `docker-compose.yml`: starts PostgreSQL 18.6 as `db`, Flyway 13.9.0 to
@@ -115,14 +117,13 @@ and run through Node's test runner with `tsx`. The test command first
 type-checks both source and tests using `doorbell-backend/tsconfig.json`.
 The tests cover JWT configuration, verification, request validation, and
 middleware using an isolated Express app.
-`src/routers/tests/userInfo.test.ts` also exercises the actual `/api/user/info`
-route with isolated test environment variables and a stubbed PostgreSQL
-`pool.query`. It loads database configuration but never connects to PostgreSQL,
-so that test file requires no running database.
+Exercise user routes against the real PostgreSQL database in
+`src/routers/tests/userInfo.integration.test.ts`; do not mock SQL operations.
 
 `src/routers/tests/listing.integration.test.ts`,
-`src/routers/tests/listingInteraction.integration.test.ts` and
-`src/routers/tests/userInfo.integration.test.ts` run with the other backend
+`src/routers/tests/listingInteraction.integration.test.ts`,
+`src/routers/tests/userInfo.integration.test.ts` and
+`src/routers/tests/userPicture.integration.test.ts` run with the other backend
 tests through `npm test --workspace=doorbell-backend`. They require a running
 Docker-compatible runtime with Linux containers and fail if none is available.
 Pinned `@testcontainers/postgresql` and `@testcontainers/s3mock` packages start
@@ -188,6 +189,11 @@ Both runtime images include `curl` for future healthchecks.
 
 - Use arrow functions for components, hooks, and standalone helpers throughout
   the codebase. Keep class constructors and methods in their normal syntax.
+- End every text file with a newline, including SQL migrations. Prettier handles
+  supported file types; check SQL migrations explicitly and use four-space
+  indentation. Editor extensions are optional.
+- Define foreign keys as named constraints at the end of `CREATE TABLE`, using
+  `<table>_<column>_fk` names.
 - The backend loads dotenv once at the start of `src/app.ts`, using
   `doorbell-backend/.env` when run through workspace scripts. Set
   `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`,
@@ -219,6 +225,13 @@ Both runtime images include `curl` for future healthchecks.
   period and storage failures retry after five minutes.
 - The backend depends on the pinned AWS SDK S3 client and presigner packages;
   update `package-lock.json` whenever those dependencies change.
+- Profile saves lock the account row and verify staged pictures before committing
+  any fields. Migration V5 tracks profile uploads for 24 hours and reuses the
+  durable image cleanup queue for retired and abandoned objects. The account's
+  `picture_key` stores the saved picture; `user_picture_upload.object_key` only
+  tracks pending uploads and is consumed on save. PUT signatures
+  bind Content-Type; signing options and URL refresh are tested separately from
+  S3Mock in `src/services/tests/imageService.test.ts`.
 - Root `package.json` defines the workspaces and shared `lint`/`build` scripts;
   `package-lock.json` must be updated with dependency changes.
 - Root `eslint.config.js` applies type-aware ESLint to both workspaces and

@@ -888,11 +888,11 @@ void describe(
           new Set(imagePaths.rows.map((row) => row.image_path))
         )
 
-        const { cleanUpListingImages } =
+        const { cleanUpImages } =
           await import('../../repositories/imageCleanupRepository.js')
         const { deleteImageObject } =
           await import('../../services/imageService.js')
-        await cleanUpListingImages(deleteImageObject)
+        await cleanUpImages(deleteImageObject)
         for (const { image_path: imagePath } of imagePaths.rows) {
           await head(imagePath)
         }
@@ -900,7 +900,7 @@ void describe(
         await pool.query(
           "UPDATE listing_image_cleanup SET available_after = CURRENT_TIMESTAMP - INTERVAL '1 second'"
         )
-        await cleanUpListingImages(deleteImageObject)
+        await cleanUpImages(deleteImageObject)
         for (const { image_path: key } of imagePaths.rows) {
           await assert.rejects(
             head(key),

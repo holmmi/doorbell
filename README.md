@@ -20,6 +20,17 @@ Use [NVM](https://github.com/nvm-sh/nvm) to manage Node versions efficiently.
 npm ci
 ```
 
+### Formatting
+
+Use the Prettier version installed by `npm ci` with the root
+[`.prettierrc`](.prettierrc). Editor extensions are optional; format individual
+files from the repository root with `npx prettier --write path/to/file.ts`.
+`npm run lint` checks Prettier formatting for TypeScript files in both workspaces.
+
+End every text file with a newline. Prettier adds this for supported file types.
+SQL migrations use four-space indentation and also need a final newline;
+the repository has no Prettier SQL plugin, so check these when editing SQL.
+
 ### Starting the development servers
 
 Start database, S3Mock and Flyway:

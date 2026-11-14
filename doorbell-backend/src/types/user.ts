@@ -23,7 +23,11 @@ export interface UserInfo {
   lastName: string
   email: string
   phone: string | null
-  picturePath: string | null
+  pictureKey: string | null
+}
+
+export interface UserInfoResponse extends UserInfo {
+  pictureUrl: string | null
 }
 
 export interface RegistrationInput {
@@ -35,7 +39,7 @@ export interface RegistrationInput {
 }
 
 export type UpdateUserInfoInput = Partial<
-  Pick<UserInfo, 'firstName' | 'lastName' | 'phone' | 'picturePath'>
+  Pick<UserInfo, 'firstName' | 'lastName' | 'phone' | 'pictureKey'>
 >
 
 export interface CreatedUser {

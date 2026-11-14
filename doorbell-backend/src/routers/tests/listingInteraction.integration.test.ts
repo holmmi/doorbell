@@ -145,7 +145,7 @@ void describe(
     void describe('preferences and matches', () => {
       beforeEach(async () => {
         await pool.query(`
-          INSERT INTO "user" (first_name, last_name, email, password, role, picture_path) VALUES
+          INSERT INTO "user" (first_name, last_name, email, password, role, picture_key) VALUES
             ('Ada', 'Tenant', 'ada@example.com', 'private-tenant-password', 'TENANT', 'profiles/2/avatar.png'),
             ('Ben', 'Tenant', 'ben@example.com', 'private-tenant-password', 'TENANT', NULL),
             ('Cal', 'Tenant', 'cal@example.com', 'private-tenant-password', 'TENANT', NULL),
