@@ -20,6 +20,31 @@ Use [NVM](https://github.com/nvm-sh/nvm) to manage Node versions efficiently.
 npm ci
 ```
 
+### Editor configuration
+
+Keep EditorConfig support enabled so the root [`.editorconfig`](.editorconfig)
+applies UTF-8 encoding, LF line endings, spaces for indentation and a final
+newline to text files, including SQL migrations.
+
+- **VS Code:** install [EditorConfig for VS Code](https://marketplace.visualstudio.com/items?itemName=EditorConfig.EditorConfig).
+  For code formatting, install the Prettier extension and use the repository's
+  locally installed Prettier and [`.prettierrc`](.prettierrc).
+- **WebStorm:** EditorConfig support is built in; keep it enabled and configure
+  Prettier to use the repository's local installation and configuration.
+
+The two configurations agree on two-space indentation and LF line endings for
+application files. Prettier also adds a final newline. Its existing rules for
+quotes, semicolons and trailing commas remain in `.prettierrc`. Explicit
+Prettier settings take precedence over values read from EditorConfig; see
+[Prettier's EditorConfig documentation](https://prettier.io/docs/configuration#editorconfig).
+SQL migrations intentionally use four-space indentation through EditorConfig;
+the repository has no Prettier SQL plugin, so Prettier does not format them.
+
+EditorConfig leaves trailing whitespace intact so saving cannot remove
+meaningful spaces in string literals or Markdown line breaks. Let Prettier
+handle whitespace in the file types it supports. `npm run lint` checks
+Prettier formatting for TypeScript files in both workspaces.
+
 ### Starting the development servers
 
 Start database, S3Mock and Flyway:
