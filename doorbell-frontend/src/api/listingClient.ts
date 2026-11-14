@@ -7,20 +7,38 @@ import {
 import { toHomeListing } from '../types/listing'
 import type {
   CreatedListing,
+  FeedFilters,
   HomeListing,
   ListingDetails,
   ListingImageInput,
   ListingFeedItem,
+  ListingFilterOptions,
   ListingInput,
   PresignedImageUpload,
   PublishedListing,
 } from '../types/listing'
 
-// The feed does not support filters or report a total yet, so callers filter
-// the returned page themselves.
-export const getFeed = async (): Promise<HomeListing[]> => {
+export const getFilterOptions = (): Promise<ListingFilterOptions> =>
+  unauthenticatedClient.request<ListingFilterOptions>('/listing/filter-options')
+
+export const getFeed = async (
+  filters: Partial<FeedFilters> = {}
+): Promise<HomeListing[]> => {
+  const query = new URLSearchParams()
+  if (filters.city?.trim()) query.set('city', filters.city.trim())
+  if (filters.neighborhood?.trim()) {
+    query.set('neighborhood', filters.neighborhood.trim())
+  }
+  if (filters.maxPrice && filters.maxPrice > 0) {
+    query.set('maxPrice', String(filters.maxPrice))
+  }
+  if (filters.minSize && filters.minSize > 0) {
+    query.set('minSize', String(filters.minSize))
+  }
   const client = getToken() ? authenticatedClient : unauthenticatedClient
-  const listings = await client.request<ListingFeedItem[]>('/listing')
+  const listings = await client.request<ListingFeedItem[]>(
+    `/listing${query.size ? `?${query.toString()}` : ''}`
+  )
   return listings.map(toHomeListing)
 }
 
