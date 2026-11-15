@@ -22,12 +22,18 @@ const feedFilters = z
     city: locationFilter,
     neighborhood: locationFilter,
     maxPrice: decimalFilter(99999999.99),
+    minPrice: decimalFilter(99999999.99),
     minSize: decimalFilter(999999.99),
   })
   .refine((filters) => !filters.neighborhood || !!filters.city, {
     path: ['neighborhood'],
     error: 'error.listing.filter.cityRequired',
   })
+  .refine(
+    ({ minPrice, maxPrice }) =>
+      minPrice === undefined || maxPrice === undefined || minPrice <= maxPrice,
+    { path: ['minPrice'], error: 'error.listing.filter.invalidPriceRange' }
+  )
 
 export const listingFeedQuerySchema = z
   .record(z.string(), z.unknown())
@@ -35,7 +41,7 @@ export const listingFeedQuerySchema = z
     // Express's simple query parser leaves bracket notation in the key.
     // Reject structured forms of known filters instead of silently ignoring them.
     for (const key of Object.keys(query)) {
-      const match = /^(city|neighborhood|maxPrice|minSize)\[/.exec(key)
+      const match = /^(city|neighborhood|maxPrice|minPrice|minSize)\[/.exec(key)
       if (match) {
         context.addIssue({
           code: 'custom',

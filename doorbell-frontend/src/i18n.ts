@@ -323,6 +323,7 @@ const resources = {
           filter: {
             cityRequired: 'Choose a city before choosing a neighborhood.',
             singleValueRequired: 'Provide a single value for each filter.',
+            invalidPriceRange: 'Minimum rent must not exceed maximum rent.',
           },
           images: {
             incomplete:

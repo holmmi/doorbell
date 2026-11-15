@@ -168,6 +168,7 @@ export const findListingFeed = async (
        AND ($4::TEXT[] IS NULL OR listing.neighborhood = ANY($4))
        AND ($5::NUMERIC IS NULL OR listing.monthly_price <= $5)
        AND ($6::NUMERIC IS NULL OR listing.square_meters >= $6)
+       AND ($7::NUMERIC IS NULL OR listing.monthly_price >= $7)
      ORDER BY listing.id
      LIMIT $2`,
     [
@@ -177,6 +178,7 @@ export const findListingFeed = async (
       filters.neighborhoods ?? null,
       filters.maxPrice ?? null,
       filters.minSize ?? null,
+      filters.minPrice ?? null,
     ]
   )
 

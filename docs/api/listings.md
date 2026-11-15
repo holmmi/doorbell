@@ -37,6 +37,7 @@ GET /api/listing?city=Helsinki&neighborhood=Kallio&maxPrice=1500&minSize=30
 | `city` | Exact city match, ignoring case and surrounding whitespace. |
 | `neighborhood` | Exact neighborhood match within `city`, with the same normalization. Requires a nonblank `city`. |
 | `maxPrice` | Inclusive maximum monthly base rent in EUR (`monthlyPrice`); excludes `extraCosts`. |
+| `minPrice` | Inclusive minimum monthly base rent in EUR; omit `maxPrice` for an open-ended band such as `minPrice=3000`. |
 | `minSize` | Inclusive minimum floor area in m² (`squareMeters`), independent of `rooms`. |
 
 Blank or whitespace-only location filters are omitted. For example,
@@ -47,10 +48,13 @@ Values are URL query strings; URL-encode spaces and other special characters.
 
 Numeric filters accept positive, finite decimal values with up to two decimal
 places, optionally surrounded by whitespace: for example `1250`, `1250.5` or
-`1250.50`. The maximum is `99999999.99` for `maxPrice` and `999999.99` for
+`1250.50`. The maximum is `99999999.99` for `minPrice`/`maxPrice` and `999999.99` for
 `minSize`. Zero, negative values, empty values, exponent/hex notation,
 non-numbers, excess decimal places and values above these bounds are invalid.
 Omit the frontend's zero/no-limit sentinel from requests.
+If both price bounds are supplied, `minPrice` must be at most `maxPrice`.
+Omit both for any price. `?minPrice=3000` selects EUR 3,000 and higher;
+`?minPrice=2000&maxPrice=2999.99` selects the preceding band.
 
 Invalid filters return HTTP 400 with `{ "errors": [...] }`, the existing Zod
 issue format. This includes repeated parameters, array/object values (including
@@ -59,6 +63,8 @@ bracket notation such as `city[]` or `maxPrice[value]`) and a nonblank
 the missing-city issue has `path: ["neighborhood"]` and translation key
 `error.listing.filter.cityRequired` in `message`. Bracket notation produces
 `error.listing.filter.singleValueRequired` at the affected filter's path.
+A minimum above the maximum produces `error.listing.filter.invalidPriceRange`
+at `path: ["minPrice"]`.
 The schemas use Zod 4's supported `error` option for refinements;
 `context.addIssue()` and response issues use `message`. Unknown fields are stripped.
 Invalid supplied bearer tokens still return HTTP 401 before query validation,
@@ -101,7 +107,7 @@ listing responses.
 ## Filter options
 
 `GET /api/listing/filter-options` returns HTTP 200 with listing-derived locations
-and fixed maximum-rent choices
+and fixed price bands
 for the main view. Authentication is optional: anonymous visitors and valid
 authenticated callers of either role may access it. An invalid or expired
 supplied bearer token returns HTTP 401 with
@@ -113,7 +119,13 @@ supplied bearer token returns HTTP 401 with
     { "city": "Helsinki", "neighborhoods": ["Kallio", "Kamppi"] },
     { "city": "Tampere", "neighborhoods": ["Keskusta"] }
   ],
-  "maxPrices": ["500.00", "1000.00", "2000.00", "3000.00"]
+  "priceRanges": [
+    { "minPrice": null, "maxPrice": "499.99" },
+    { "minPrice": "500.00", "maxPrice": "999.99" },
+    { "minPrice": "1000.00", "maxPrice": "1999.99" },
+    { "minPrice": "2000.00", "maxPrice": "2999.99" },
+    { "minPrice": "3000.00", "maxPrice": null }
+  ]
 }
 ```
 
@@ -134,15 +146,18 @@ without a nonblank neighborhood has `neighborhoods: []`. The same neighborhood
 name in two cities remains a separate choice under each city. Send both city
 and neighborhood to select one of these choices.
 
-`maxPrices` always contains the fixed inclusive maximum rents shown above,
-as decimal strings with two decimal places. Label these choices "Up to EUR 500",
-"Up to EUR 1,000", "Up to EUR 2,000" and "Up to EUR 3,000". For "No limit",
-omit `maxPrice` so listings above EUR 3,000 can also appear. These are maximums,
-not lower bounds or disjoint price bands. The feed still accepts any valid
-custom maximum rent. The frontend may define size thresholds using `minSize`.
+`priceRanges` replaces `maxPrices` and always contains the fixed bands above:
+under EUR 500, EUR 500–<1,000, EUR 1,000–<2,000, EUR 2,000–<3,000, and EUR 3,000+.
+Bounds are inclusive decimal strings with two decimal places; `null` means
+there is no bound. Send each non-null bound as its matching query parameter
+and omit null bounds. The EUR 3,000+ choice sends only `minPrice=3000.00`.
+The bands cover every valid rent without gaps or overlaps, including exactly
+EUR 3,000 in the final band. For "Any price", omit both bounds.
+The feed still accepts custom price bounds, and the frontend may define size
+thresholds using `minSize`.
 
 An empty or draft-only dataset returns `locations: []` with the same fixed
-`maxPrices` choices. Prices do not change when listings are added or updated.
+`priceRanges` choices. Bands do not change when listings are added or updated.
 The response contains only these options, without account data or storage keys.
 
 ## My listings

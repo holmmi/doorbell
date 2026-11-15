@@ -15,6 +15,14 @@ import {
   seedPublishedListing,
 } from './helpers/integration.js'
 
+const expectedPriceRanges = [
+  { minPrice: null, maxPrice: '499.99' },
+  { minPrice: '500.00', maxPrice: '999.99' },
+  { minPrice: '1000.00', maxPrice: '1999.99' },
+  { minPrice: '2000.00', maxPrice: '2999.99' },
+  { minPrice: '3000.00', maxPrice: null },
+]
+
 const seed = async (
   city = 'Helsinki',
   neighborhood = 'Kallio',
@@ -148,7 +156,7 @@ void describe(
         ['3', eligible.slice(0, 10)],
       ] as const) {
         const listings = await feed(
-          '?city=Helsinki&maxPrice=1000&minSize=40',
+          '?city=Helsinki&minPrice=1000&maxPrice=1000&minSize=40',
           userId
         )
         assert.deepEqual(
@@ -174,6 +182,9 @@ void describe(
         'city=%20&neighborhood=Kallio',
         'maxPrice=0',
         'minSize=0.00',
+        'minPrice=0',
+        'minPrice=bad',
+        'minPrice=3000&maxPrice=2999.99',
         'maxPrice=-1',
         'maxPrice=1.234',
         'minSize=30.001',
@@ -188,7 +199,13 @@ void describe(
         'minSize=0x10',
         'maxPrice=1,50',
       ]
-      for (const field of ['city', 'neighborhood', 'maxPrice', 'minSize']) {
+      for (const field of [
+        'city',
+        'neighborhood',
+        'maxPrice',
+        'minPrice',
+        'minSize',
+      ]) {
         queries.push(
           `${field}=1&${field}=2`,
           `${field}[]=1`,
@@ -228,7 +245,7 @@ void describe(
       }
     })
 
-    void test('metadata uses all published locations with deterministic text and fixed price ceilings', async () => {
+    void test('metadata uses all published locations with deterministic text and fixed price bands', async () => {
       for (let i = 0; i < 12; i += 1) await seed('Helsinki', 'Kallio', 100)
       await seed('\tHELSINKI\u00a0', ' kallio ', 100)
       const reviewed = await seed('Helsinki', 'Kamppi', 1250.25)
@@ -243,7 +260,7 @@ void describe(
           { city: 'Tampere', neighborhoods: ['Kallio', 'Keskusta'] },
           { city: 'Zcity', neighborhoods: [] },
         ],
-        maxPrices: ['500.00', '1000.00', '2000.00', '3000.00'],
+        priceRanges: expectedPriceRanges,
       }
       assert.deepEqual(await options(), expected)
       await pool.query(
@@ -274,43 +291,48 @@ void describe(
           }
         }
       }
-      for (const maxPrice of expected.maxPrices) {
-        const listings = await feed(`?maxPrice=${maxPrice}`)
-        assert.ok(listings.length > 0)
-        assert.ok(
-          listings.every(
-            (listing) => Number(listing.monthlyPrice) <= Number(maxPrice)
-          )
-        )
-      }
     })
 
-    void test('fixed price choices include their ceiling and no limit includes rent above 3000', async () => {
-      const { maxPrices } = await options()
-      const expected: string[] = []
-      for (const maxPrice of maxPrices) {
-        expected.push(await seed('Helsinki', 'Kallio', Number(maxPrice)))
-        assert.deepEqual(
-          (await feed(`?maxPrice=${maxPrice}`, '2')).map(({ id }) => id),
-          expected
+    void test('price bands cover each boundary exactly once and include open-ended 3000+ rent', async () => {
+      const prices = [
+        0.01, 499.99, 500, 500.01, 999.99, 1000, 1000.01, 1999.99, 2000,
+        2000.01, 2999.99, 3000, 3000.01, 99999999.99,
+      ]
+      const ids: string[] = []
+      for (const price of prices)
+        ids.push(await seed('Helsinki', 'Kallio', price))
+      const { priceRanges } = await options()
+      assert.deepEqual(priceRanges, expectedPriceRanges)
+      const expectedGroups = [
+        ids.slice(0, 2),
+        ids.slice(2, 5),
+        ids.slice(5, 8),
+        ids.slice(8, 11),
+        ids.slice(11),
+      ]
+      const allMatches: string[] = []
+      for (const [index, range] of priceRanges.entries()) {
+        const query = new URLSearchParams()
+        if (range.minPrice !== null) query.set('minPrice', range.minPrice)
+        if (range.maxPrice !== null) query.set('maxPrice', range.maxPrice)
+        const matches = (await feed('?' + query.toString(), '2')).map(
+          ({ id }) => id
         )
-        const above = await seed('Helsinki', 'Kallio', Number(maxPrice) + 0.01)
-        assert.deepEqual(
-          (await feed(`?maxPrice=${maxPrice}`, '2')).map(({ id }) => id),
-          expected
-        )
-        expected.push(above)
+        assert.deepEqual(matches, expectedGroups[index])
+        allMatches.push(...matches)
       }
+      assert.deepEqual(allMatches, ids)
+      // Lower bounds are applied before the anonymous two-listing limit too.
       assert.deepEqual(
-        (await feed('', '2')).map(({ id }) => id),
-        expected
+        (await feed('?minPrice=3000')).map(({ id }) => id),
+        ids.slice(11, 13)
       )
     })
 
     void test('empty and draft-only datasets keep price presets but have no locations or feed', async () => {
       const empty = {
         locations: [],
-        maxPrices: ['500.00', '1000.00', '2000.00', '3000.00'],
+        priceRanges: expectedPriceRanges,
       }
       assert.deepEqual(await options(), empty)
       assert.deepEqual(await feed(''), [])
@@ -323,12 +345,12 @@ void describe(
       const id = await seed('Helsinki', 'Kallio', 1000, 40, 1, false)
       assert.deepEqual(await options(), {
         locations: [],
-        maxPrices: ['500.00', '1000.00', '2000.00', '3000.00'],
+        priceRanges: expectedPriceRanges,
       })
       assert.equal((await request('POST', `/${id}/publish`)).status, 200)
       assert.deepEqual(await options(), {
         locations: [{ city: 'Helsinki', neighborhoods: ['Kallio'] }],
-        maxPrices: ['500.00', '1000.00', '2000.00', '3000.00'],
+        priceRanges: expectedPriceRanges,
       })
       assert.equal(
         (
@@ -343,7 +365,7 @@ void describe(
       )
       assert.deepEqual(await options(), {
         locations: [{ city: 'Tampere', neighborhoods: ['Keskusta'] }],
-        maxPrices: ['500.00', '1000.00', '2000.00', '3000.00'],
+        priceRanges: expectedPriceRanges,
       })
       assert.deepEqual(await feed('?city=Helsinki'), [])
       assert.deepEqual(
@@ -357,7 +379,7 @@ void describe(
       )
       assert.deepEqual(await options(), {
         locations: [],
-        maxPrices: ['500.00', '1000.00', '2000.00', '3000.00'],
+        priceRanges: expectedPriceRanges,
       })
       assert.deepEqual(await feed(''), [])
     })

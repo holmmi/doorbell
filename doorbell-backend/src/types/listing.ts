@@ -13,12 +13,13 @@ export interface ListingFeedDatabaseFilters {
   cities?: string[]
   neighborhoods?: string[]
   maxPrice?: number
+  minPrice?: number
   minSize?: number
 }
 
 export interface ListingFilterOptions {
   locations: Array<{ city: string; neighborhoods: string[] }>
-  maxPrices: string[]
+  priceRanges: Array<{ minPrice: string | null; maxPrice: string | null }>
 }
 
 export const rooms = [

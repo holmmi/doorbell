@@ -3,6 +3,32 @@ import { test } from 'node:test'
 
 import { listingFeedQuerySchema } from '../listing.js'
 
+void test('price ranges accept inclusive bounds and an open-ended minimum', () => {
+  assert.deepEqual(listingFeedQuerySchema.parse({ minPrice: ' 3000.00 ' }), {
+    minPrice: 3000,
+  })
+  assert.deepEqual(
+    listingFeedQuerySchema.parse({ minPrice: '500', maxPrice: '999.99' }),
+    { minPrice: 500, maxPrice: 999.99 }
+  )
+  assert.deepEqual(
+    listingFeedQuerySchema.parse({ minPrice: '3000', maxPrice: '3000' }),
+    { minPrice: 3000, maxPrice: 3000 }
+  )
+  const result = listingFeedQuerySchema.safeParse({
+    minPrice: '3000',
+    maxPrice: '2999.99',
+  })
+  assert.equal(result.success, false)
+  if (!result.success) {
+    assert.deepEqual(result.error.issues[0].path, ['minPrice'])
+    assert.equal(
+      result.error.issues[0].message,
+      'error.listing.filter.invalidPriceRange'
+    )
+  }
+})
+
 void test('feed query normalizes text, parses decimals and strips unknown fields', () => {
   assert.deepEqual(listingFeedQuerySchema.parse({}), {})
   assert.deepEqual(
@@ -30,6 +56,7 @@ void test('feed query normalizes text, parses decimals and strips unknown fields
 void test('feed query accepts inclusive numeric bounds and decimal formats', () => {
   for (const [field, maximum] of [
     ['maxPrice', '99999999.99'],
+    ['minPrice', '99999999.99'],
     ['minSize', '999999.99'],
   ]) {
     for (const value of ['0.01', '1', '1.2', '1.23', '0001.20', maximum]) {
@@ -43,7 +70,7 @@ void test('feed query accepts inclusive numeric bounds and decimal formats', () 
 })
 
 void test('feed query rejects malformed, nonpositive and out-of-range numbers', () => {
-  for (const field of ['maxPrice', 'minSize']) {
+  for (const field of ['maxPrice', 'minPrice', 'minSize']) {
     for (const value of [
       '',
       ' ',
@@ -84,7 +111,13 @@ void test('feed query rejects malformed, nonpositive and out-of-range numbers', 
 })
 
 void test('feed query rejects structured text and bracket notation', () => {
-  for (const field of ['city', 'neighborhood', 'maxPrice', 'minSize']) {
+  for (const field of [
+    'city',
+    'neighborhood',
+    'maxPrice',
+    'minPrice',
+    'minSize',
+  ]) {
     for (const value of [null, 1, true, ['Helsinki'], { value: 'Helsinki' }]) {
       assert.equal(
         listingFeedQuerySchema.safeParse({ [field]: value }).success,
