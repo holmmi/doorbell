@@ -25,7 +25,9 @@ export const getFeed = async (
   filters: Partial<FeedFilters> = {}
 ): Promise<HomeListing[]> => {
   const query = new URLSearchParams()
-  if (filters.city?.trim()) query.set('city', filters.city.trim())
+  if (filters.city?.trim()) {
+    query.set('city', filters.city.trim())
+  }
   if (filters.neighborhood?.trim()) {
     query.set('neighborhood', filters.neighborhood.trim())
   }

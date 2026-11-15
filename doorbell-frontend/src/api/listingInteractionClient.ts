@@ -7,6 +7,15 @@ import type {
   PendingApplicant,
 } from '../types/listingInteraction'
 
+export const savePreference = (
+  listingId: string,
+  liked: boolean
+): Promise<void> =>
+  authenticatedClient.request<void>(
+    `/listing-interaction/${encodeURIComponent(listingId)}/preference`,
+    { method: 'POST', body: { liked } }
+  )
+
 export const getMatches = (signal?: AbortSignal): Promise<MatchResponse[]> =>
   authenticatedClient.request<MatchResponse[]>('/listing-interaction/matches', {
     signal,

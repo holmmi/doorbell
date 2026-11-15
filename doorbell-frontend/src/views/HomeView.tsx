@@ -8,11 +8,12 @@ import {
   Skeleton,
   Typography,
 } from '@mui/material'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router'
 import { ApiError } from '../api/client'
 import { getFeed, getFilterOptions } from '../api/listingClient'
+import { savePreference } from '../api/listingInteractionClient'
 import { EmptyDeck } from '../components/home/EmptyDeck'
 import { Faq } from '../components/home/Faq'
 import { FilterBar } from '../components/home/FilterBar'
@@ -99,17 +100,38 @@ const HomeContent = ({
     listings: HomeListing[]
     error: string | null
   } | null>(null)
-  const [attempt, setAttempt] = useState(0)
   const [decided, setDecided] = useState<ReadonlySet<string>>(() => new Set())
+  const [saving, setSaving] = useState(false)
+  const savingRef = useRef(false)
+  const [saveError, setSaveError] = useState<{
+    filters: FeedFilters
+    code: string
+  } | null>(null)
   const [likeNotice, setLikeNotice] = useState<FeedFilters | null>(null)
   const [signUpOpen, setSignUpOpen] = useState<FeedFilters | null>(null)
+  const deck = (result?.listings ?? []).filter(
+    (listing) => !decided.has(listing.id)
+  )
+  const exhausted =
+    result?.filters === filters &&
+    result.listings.length > 0 &&
+    deck.length === 0
 
   useEffect(() => {
     if (status === 'loading') return
+    // Saved preferences are excluded by the API. Refill only after consuming
+    // a nonempty response; an empty response or error must not cause a loop.
+    if (result?.filters === filters && (!exhausted || result.error)) return
     let ignore = false
     getFeed(filters)
       .then((feed) => {
-        if (!ignore) setResult({ filters, listings: feed, error: null })
+        if (!ignore) {
+          setResult({
+            filters,
+            listings: feed.filter((listing) => !decided.has(listing.id)),
+            error: null,
+          })
+        }
       })
       .catch((error: unknown) => {
         if (ignore) return
@@ -118,11 +140,12 @@ const HomeContent = ({
     return () => {
       ignore = true
     }
-  }, [filters, status, attempt])
+  }, [filters, status, result, exhausted, decided])
 
   // A response belongs to the exact selection that requested it. Hide the old
   // deck during render, before effects run, and ignore responses after cleanup.
-  const loading = result?.filters !== filters || viewer === 'LOADING'
+  const loading =
+    result?.filters !== filters || viewer === 'LOADING' || exhausted
   const errorCode = loading ? null : result?.error
   const canSwipe = viewer === 'TENANT' || viewer === 'ANONYMOUS'
   const filtersActive =
@@ -130,20 +153,31 @@ const HomeContent = ({
     filters.neighborhood !== '' ||
     filters.maxPrice > 0 ||
     filters.minSize > 0
-  const deck = (result?.listings ?? []).filter(
-    (listing) => !decided.has(listing.id)
-  )
   const clearFilters = () => setFilters({ ...noFilters })
 
-  const handleDecide = (listing: HomeListing, liked: boolean) => {
-    if (liked && viewer === 'ANONYMOUS') {
+  const handleDecide = async (listing: HomeListing, liked: boolean) => {
+    if (viewer === 'ANONYMOUS') {
       setSignUpOpen(filters)
       return
     }
-    // TODO: save with POST /api/listing/:listingId/preference once the backend
-    // supports it. Until then decisions only last until the page reloads.
-    setDecided((current) => new Set(current).add(listing.id))
-    setLikeNotice(liked ? filters : null)
+    if (viewer !== 'TENANT' || savingRef.current) return
+    savingRef.current = true
+    setSaving(true)
+    setSaveError(null)
+    setLikeNotice(null)
+    try {
+      await savePreference(listing.id, liked)
+      setDecided((current) => new Set(current).add(listing.id))
+      setLikeNotice(liked ? filters : null)
+      // A filter request may have raced this write. Reload its response so
+      // already decided listings cannot hide additional matching homes.
+      setResult((current) => (current?.filters !== filters ? null : current))
+    } catch (error: unknown) {
+      setSaveError({ filters, code: errorCodeOf(error) })
+    } finally {
+      savingRef.current = false
+      setSaving(false)
+    }
   }
 
   return (
@@ -219,9 +253,9 @@ const HomeContent = ({
         >
           {loading
             ? t('home.deck.loading')
-            : errorCode
-              ? null
-              : t('home.filters.batchCount', { count: deck.length })}
+            : saving
+              ? t('home.deck.saving')
+              : null}
         </Typography>
 
         <Box
@@ -242,7 +276,6 @@ const HomeContent = ({
                   color="inherit"
                   onClick={() => {
                     setResult(null)
-                    setAttempt((current) => current + 1)
                   }}
                 >
                   {t('home.retry')}
@@ -257,7 +290,8 @@ const HomeContent = ({
               listings={deck}
               today={today}
               canSwipe={canSwipe}
-              onDecide={handleDecide}
+              saving={saving}
+              onDecide={(listing, liked) => void handleDecide(listing, liked)}
             />
           ) : (
             <EmptyDeck
@@ -266,6 +300,13 @@ const HomeContent = ({
             />
           )}
         </Box>
+
+        {saveError?.filters === filters ? (
+          <Alert severity="error" sx={{ mt: 2 }}>
+            {t('home.deck.saveError')}{' '}
+            {t(saveError.code, { defaultValue: t('error.unknown') })}
+          </Alert>
+        ) : null}
 
         <Typography sx={{ mt: 4, fontSize: 18, color: 'text.secondary' }}>
           {viewer === 'LANDLORD'

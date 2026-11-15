@@ -4,6 +4,8 @@ import { useTranslation } from 'react-i18next'
 import type { FeedFilters, ListingFilterOptions } from '../../types/listing'
 
 const minSizes = [30, 40, 50]
+// Fixed budget steps keep the dropdown useful regardless of distinct rents.
+const maxPrices = [500, 1000, 1500, 2000, 2500, 3000]
 const locationValue = (city: string, neighborhood = '') =>
   city ? JSON.stringify([city, neighborhood]) : ''
 
@@ -84,9 +86,6 @@ export const FilterBar = ({ filters, options, onChange }: FilterBarProps) => {
       ...neighborhoods.map((neighborhood) => ({ city, neighborhood })),
     ]
   )
-  const prices = [...(options?.maxPrices ?? [])].sort(
-    (a, b) => Number(a) - Number(b)
-  )
 
   return (
     <Box
@@ -146,20 +145,18 @@ export const FilterBar = ({ filters, options, onChange }: FilterBarProps) => {
         id="home-filter-max-price"
         label={t('home.filters.maxPrice')}
         value={filters.maxPrice ? String(filters.maxPrice) : ''}
-        disabled={options === null}
         onChange={(maxPrice) =>
           onChange({ ...filters, maxPrice: Number(maxPrice) })
         }
       >
         <MenuItem value="">{t('home.filters.noLimit')}</MenuItem>
-        {prices.map((price) => (
-          <MenuItem key={price} value={String(Number(price))}>
+        {maxPrices.map((price) => (
+          <MenuItem key={price} value={String(price)}>
             {new Intl.NumberFormat(i18n.language, {
               style: 'currency',
               currency: 'EUR',
-              minimumFractionDigits: Number.isInteger(Number(price)) ? 0 : 2,
-              maximumFractionDigits: 2,
-            }).format(Number(price))}
+              maximumFractionDigits: 0,
+            }).format(price)}
           </MenuItem>
         ))}
       </FilterField>
