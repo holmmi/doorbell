@@ -305,6 +305,18 @@ const resources = {
         },
       },
       error: {
+        user: {
+          picture: {
+            invalidKey:
+              'This profile picture upload has expired or is invalid. Please upload it again.',
+            invalidObject:
+              'This profile picture is empty or does not match its file type.',
+            notUploaded:
+              'This profile picture has not finished uploading. Please try again.',
+            storageUnavailable:
+              'Profile picture storage is unavailable. Please try again later.',
+          },
+        },
         listing: {
           notFound: 'This listing could not be found.',
           unavailable: 'This listing is no longer available.',

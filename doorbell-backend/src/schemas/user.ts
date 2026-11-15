@@ -7,7 +7,7 @@ export const updateUserInfoSchema = z
     firstName: z.string().min(1).optional(),
     lastName: z.string().min(1).optional(),
     phone: z.string().min(1).nullable().optional(),
-    picturePath: z.string().min(1).nullable().optional(),
+    pictureKey: z.string().min(1).nullable().optional(),
   })
   .refine((input) => Object.values(input).some((value) => value !== undefined))
 
