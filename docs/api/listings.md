@@ -56,7 +56,11 @@ Invalid filters return HTTP 400 with `{ "errors": [...] }`, the existing Zod
 issue format. This includes repeated parameters, array/object values (including
 bracket notation such as `city[]` or `maxPrice[value]`) and a nonblank
 `neighborhood` without a city. Each issue includes `code`, `path` and `message`;
-the missing-city issue has `path: ["neighborhood"]`. Unknown fields are stripped.
+the missing-city issue has `path: ["neighborhood"]` and translation key
+`error.listing.filter.cityRequired` in `message`. Bracket notation produces
+`error.listing.filter.singleValueRequired` at the affected filter's path.
+The schemas use Zod 4's supported `error` option for refinements;
+`context.addIssue()` and response issues use `message`. Unknown fields are stripped.
 Invalid supplied bearer tokens still return HTTP 401 before query validation,
 using `{"error":"error.authentication.unauthorized"}` as described in
 [Users and authentication](users.md).
@@ -96,7 +100,8 @@ listing responses.
 
 ## Filter options
 
-`GET /api/listing/filter-options` returns HTTP 200 with listing-derived choices
+`GET /api/listing/filter-options` returns HTTP 200 with listing-derived locations
+and fixed maximum-rent choices
 for the main view. Authentication is optional: anonymous visitors and valid
 authenticated callers of either role may access it. An invalid or expired
 supplied bearer token returns HTTP 401 with
@@ -108,11 +113,11 @@ supplied bearer token returns HTTP 401 with
     { "city": "Helsinki", "neighborhoods": ["Kallio", "Kamppi"] },
     { "city": "Tampere", "neighborhoods": ["Keskusta"] }
   ],
-  "maxPrices": ["1250.00", "1500.00"]
+  "maxPrices": ["500.00", "1000.00", "2000.00", "3000.00"]
 }
 ```
 
-Options come from **all published listings**, independently of the feed limit
+Location options come from **all published listings**, independently of the feed limit
 or selected filters. They are not personalized: own listings and existing
 likes/dislikes still contribute, so swiping does not remove choices. Drafts
 never contribute. Publication and listing updates are reflected on the next
@@ -121,19 +126,23 @@ request.
 Cities and their neighborhoods are trimmed, deduplicated case-insensitively
 using the same normalization as feed matching, and sorted alphabetically.
 Display text comes from listings; when casing differs, the smallest trimmed
-value in PostgreSQL's `C` collation is selected deterministically. Blank cities
+value in JavaScript's default string sort order is selected deterministically.
+Normalization uses JavaScript's native `trim()` and `toLowerCase()` for both
+stored locations and filter values. Blank cities
 are omitted; blank neighborhoods are omitted from their city's array. A city
 without a nonblank neighborhood has `neighborhoods: []`. The same neighborhood
 name in two cities remains a separate choice under each city. Send both city
 and neighborhood to select one of these choices.
 
-`maxPrices` contains distinct actual monthly base rents, sorted numerically
-ascending and returned as decimal strings with two decimal places, matching
-listing responses. Published listings with blank location fields still
-contribute prices. There are no fixed price presets or size options; the
-frontend may define size thresholds and send them using `minSize`.
+`maxPrices` always contains the fixed inclusive maximum rents shown above,
+as decimal strings with two decimal places. Label these choices "Up to EUR 500",
+"Up to EUR 1,000", "Up to EUR 2,000" and "Up to EUR 3,000". For "No limit",
+omit `maxPrice` so listings above EUR 3,000 can also appear. These are maximums,
+not lower bounds or disjoint price bands. The feed still accepts any valid
+custom maximum rent. The frontend may define size thresholds using `minSize`.
 
-An empty published dataset returns `{ "locations": [], "maxPrices": [] }`.
+An empty or draft-only dataset returns `locations: []` with the same fixed
+`maxPrices` choices. Prices do not change when listings are added or updated.
 The response contains only these options, without account data or storage keys.
 
 ## My listings

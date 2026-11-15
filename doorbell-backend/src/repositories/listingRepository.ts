@@ -7,8 +7,8 @@ import type {
   Listing,
   ListingDetails,
   ListingFeedItem,
-  ListingFeedFilters,
-  ListingFilterOptions,
+  ListingFeedDatabaseFilters,
+  ListingLocation,
   ListingImage,
   ListingInput,
 } from '../types/listing.js'
@@ -31,11 +31,6 @@ const listingColumns = `
 const imageColumns = `
   id, image_path AS "imagePath", display_order AS "displayOrder"
 `
-
-// Match JavaScript String.trim() whitespace for both stored text and query values.
-// Expressions passed here are fixed SQL, never user input.
-const trimLocation = (expression: string) =>
-  `btrim(${expression}, E' \\t\\n\\r\\f\\u000b\\u00a0\\u1680\\u2000\\u2001\\u2002\\u2003\\u2004\\u2005\\u2006\\u2007\\u2008\\u2009\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000\\ufeff')`
 
 const listingValues = (input: ListingInput) => [
   input.rent,
@@ -154,7 +149,7 @@ export const findOwnedListings = async (
 export const findListingFeed = async (
   userId: string | undefined,
   limit: number,
-  filters: ListingFeedFilters = {}
+  filters: ListingFeedDatabaseFilters = {}
 ): Promise<ListingFeedItem[]> => {
   const result = await pool.query<ListingFeedItem>(
     `SELECT ${listingColumns}
@@ -169,8 +164,8 @@ export const findListingFeed = async (
              AND preference.rental_listing_id = listing.id
          )
        )
-       AND ($3::TEXT IS NULL OR lower(${trimLocation('listing.city')}) = lower($3))
-       AND ($4::TEXT IS NULL OR lower(${trimLocation('listing.neighborhood')}) = lower($4))
+       AND ($3::TEXT[] IS NULL OR listing.city = ANY($3))
+       AND ($4::TEXT[] IS NULL OR listing.neighborhood = ANY($4))
        AND ($5::NUMERIC IS NULL OR listing.monthly_price <= $5)
        AND ($6::NUMERIC IS NULL OR listing.square_meters >= $6)
      ORDER BY listing.id
@@ -178,8 +173,8 @@ export const findListingFeed = async (
     [
       userId ?? null,
       limit,
-      filters.city ?? null,
-      filters.neighborhood ?? null,
+      filters.cities ?? null,
+      filters.neighborhoods ?? null,
       filters.maxPrice ?? null,
       filters.minSize ?? null,
     ]
@@ -199,39 +194,12 @@ export const findListingFeed = async (
   return listings
 }
 
-export const findListingFilterOptions =
-  async (): Promise<ListingFilterOptions> => {
-    const [locations, prices] = await Promise.all([
-      pool.query<ListingFilterOptions['locations'][number]>(
-        `WITH locations AS (
-         SELECT ${trimLocation('city')} AS city,
-                ${trimLocation('neighborhood')} AS neighborhood
-         FROM rental_listing WHERE published
-       ), neighborhoods AS (
-         SELECT lower(city) AS city_key, min(city COLLATE "C") AS city,
-                lower(neighborhood) AS neighborhood_key,
-                min(neighborhood COLLATE "C") AS neighborhood
-         FROM locations WHERE city <> ''
-         GROUP BY lower(city), lower(neighborhood)
-       )
-       SELECT min(city COLLATE "C") AS city,
-              COALESCE(
-                array_agg(neighborhood ORDER BY neighborhood_key)
-                  FILTER (WHERE neighborhood <> ''),
-                ARRAY[]::TEXT[]
-              ) AS neighborhoods
-       FROM neighborhoods GROUP BY city_key ORDER BY city_key`
-      ),
-      pool.query<{ monthlyPrice: string }>(
-        `SELECT DISTINCT monthly_price AS "monthlyPrice"
-       FROM rental_listing WHERE published ORDER BY monthly_price`
-      ),
-    ])
-    return {
-      locations: locations.rows,
-      maxPrices: prices.rows.map(({ monthlyPrice }) => monthlyPrice),
-    }
-  }
+export const findPublishedLocations = async (): Promise<ListingLocation[]> => {
+  const result = await pool.query<ListingLocation>(
+    'SELECT DISTINCT city, neighborhood FROM rental_listing WHERE published'
+  )
+  return result.rows
+}
 
 export const updateListing = async (
   client: PoolClient,

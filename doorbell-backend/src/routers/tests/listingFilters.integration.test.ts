@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict'
 import { beforeEach, describe, test } from 'node:test'
+import { apiRequest } from './helpers/utils.js'
 
 import type {
   ListingFeedResponse,
@@ -32,20 +33,18 @@ const seed = async (
   return id
 }
 
-const get = async (path: string, userId?: string) => {
-  if (!userId) return publicRequest('GET', path)
-  const { createAccessToken } = await import('../../utils/jwt.js')
-  return requestAs(createAccessToken(userId), 'GET', path)
-}
-
 const feed = async (query: string, userId?: string) => {
-  const response = await get(query, userId)
+  const response = await apiRequest(userId, 'GET', `/listing${query}`)
   assert.equal(response.status, 200)
   return (await response.json()) as ListingFeedResponse[]
 }
 
 const options = async (userId?: string, query = '') => {
-  const response = await get(`/filter-options${query}`, userId)
+  const response = await apiRequest(
+    userId,
+    'GET',
+    `/listing/filter-options${query}`
+  )
   assert.equal(response.status, 200)
   return (await response.json()) as ListingFilterOptions
 }
@@ -229,7 +228,7 @@ void describe(
       }
     })
 
-    void test('metadata uses all published listings with deterministic grouped text and numeric prices', async () => {
+    void test('metadata uses all published locations with deterministic text and fixed price ceilings', async () => {
       for (let i = 0; i < 12; i += 1) await seed('Helsinki', 'Kallio', 100)
       await seed('\tHELSINKI\u00a0', ' kallio ', 100)
       const reviewed = await seed('Helsinki', 'Kamppi', 1250.25)
@@ -244,7 +243,7 @@ void describe(
           { city: 'Tampere', neighborhoods: ['Kallio', 'Keskusta'] },
           { city: 'Zcity', neighborhoods: [] },
         ],
-        maxPrices: ['9.00', '80.00', '100.00', '950.00', '1250.25'],
+        maxPrices: ['500.00', '1000.00', '2000.00', '3000.00'],
       }
       assert.deepEqual(await options(), expected)
       await pool.query(
@@ -286,8 +285,33 @@ void describe(
       }
     })
 
-    void test('empty and draft-only datasets return empty options and feeds', async () => {
-      const empty = { locations: [], maxPrices: [] }
+    void test('fixed price choices include their ceiling and no limit includes rent above 3000', async () => {
+      const { maxPrices } = await options()
+      const expected: string[] = []
+      for (const maxPrice of maxPrices) {
+        expected.push(await seed('Helsinki', 'Kallio', Number(maxPrice)))
+        assert.deepEqual(
+          (await feed(`?maxPrice=${maxPrice}`, '2')).map(({ id }) => id),
+          expected
+        )
+        const above = await seed('Helsinki', 'Kallio', Number(maxPrice) + 0.01)
+        assert.deepEqual(
+          (await feed(`?maxPrice=${maxPrice}`, '2')).map(({ id }) => id),
+          expected
+        )
+        expected.push(above)
+      }
+      assert.deepEqual(
+        (await feed('', '2')).map(({ id }) => id),
+        expected
+      )
+    })
+
+    void test('empty and draft-only datasets keep price presets but have no locations or feed', async () => {
+      const empty = {
+        locations: [],
+        maxPrices: ['500.00', '1000.00', '2000.00', '3000.00'],
+      }
       assert.deepEqual(await options(), empty)
       assert.deepEqual(await feed(''), [])
       await seed('Secret', 'Draft', 1000, 40, 1, false)
@@ -297,11 +321,14 @@ void describe(
 
     void test('publication, updates and unpublication are reflected on the next request', async () => {
       const id = await seed('Helsinki', 'Kallio', 1000, 40, 1, false)
-      assert.deepEqual(await options(), { locations: [], maxPrices: [] })
+      assert.deepEqual(await options(), {
+        locations: [],
+        maxPrices: ['500.00', '1000.00', '2000.00', '3000.00'],
+      })
       assert.equal((await request('POST', `/${id}/publish`)).status, 200)
       assert.deepEqual(await options(), {
         locations: [{ city: 'Helsinki', neighborhoods: ['Kallio'] }],
-        maxPrices: ['1000.00'],
+        maxPrices: ['500.00', '1000.00', '2000.00', '3000.00'],
       })
       assert.equal(
         (
@@ -316,7 +343,7 @@ void describe(
       )
       assert.deepEqual(await options(), {
         locations: [{ city: 'Tampere', neighborhoods: ['Keskusta'] }],
-        maxPrices: ['1500.25'],
+        maxPrices: ['500.00', '1000.00', '2000.00', '3000.00'],
       })
       assert.deepEqual(await feed('?city=Helsinki'), [])
       assert.deepEqual(
@@ -328,7 +355,10 @@ void describe(
           .status,
         200
       )
-      assert.deepEqual(await options(), { locations: [], maxPrices: [] })
+      assert.deepEqual(await options(), {
+        locations: [],
+        maxPrices: ['500.00', '1000.00', '2000.00', '3000.00'],
+      })
       assert.deepEqual(await feed(''), [])
     })
   }

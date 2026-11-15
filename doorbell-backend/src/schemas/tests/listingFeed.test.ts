@@ -92,11 +92,17 @@ void test('feed query rejects structured text and bracket notation', () => {
       )
     }
     for (const suffix of ['[]', '[0]', '[value]']) {
-      assert.equal(
-        listingFeedQuerySchema.safeParse({ [`${field}${suffix}`]: '1' })
-          .success,
-        false
-      )
+      const result = listingFeedQuerySchema.safeParse({
+        [`${field}${suffix}`]: '1',
+      })
+      assert.equal(result.success, false)
+      if (!result.success) {
+        assert.deepEqual(result.error.issues[0].path, [field])
+        assert.equal(
+          result.error.issues[0].message,
+          'error.listing.filter.singleValueRequired'
+        )
+      }
     }
   }
 })
@@ -108,7 +114,12 @@ void test('a nonblank neighborhood requires a nonblank city', () => {
       neighborhood: 'Kallio',
     })
     assert.equal(result.success, false)
-    if (!result.success)
+    if (!result.success) {
       assert.deepEqual(result.error.issues[0].path, ['neighborhood'])
+      assert.equal(
+        result.error.issues[0].message,
+        'error.listing.filter.cityRequired'
+      )
+    }
   }
 })

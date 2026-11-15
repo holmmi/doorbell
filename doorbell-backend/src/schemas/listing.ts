@@ -26,7 +26,7 @@ const feedFilters = z
   })
   .refine((filters) => !filters.neighborhood || !!filters.city, {
     path: ['neighborhood'],
-    error: 'A neighborhood requires a city',
+    error: 'error.listing.filter.cityRequired',
   })
 
 export const listingFeedQuerySchema = z
@@ -40,7 +40,7 @@ export const listingFeedQuerySchema = z
         context.addIssue({
           code: 'custom',
           path: [match[1]],
-          message: 'Expected a single query value',
+          message: 'error.listing.filter.singleValueRequired',
         })
       }
     }

@@ -320,6 +320,10 @@ const resources = {
             notFound: 'This applicant could not be found for the listing.',
             notInterested: 'This tenant is not interested in the listing.',
           },
+          filter: {
+            cityRequired: 'Choose a city before choosing a neighborhood.',
+            singleValueRequired: 'Provide a single value for each filter.',
+          },
           images: {
             incomplete:
               'Add at least one photo before publishing your listing.',

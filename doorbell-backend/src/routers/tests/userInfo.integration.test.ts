@@ -2,20 +2,11 @@ import assert from 'node:assert/strict'
 import { describe, test } from 'node:test'
 
 import type { UserInfo } from '../../types/user.js'
-import { baseUrl, pool } from './helpers/integration.js'
+import { pool } from './helpers/integration.js'
+import { apiRequest } from './helpers/utils.js'
 
-const request = async (userId: string, method: string, body?: unknown) => {
-  const { createAccessToken } = await import('../../utils/jwt.js')
-  return fetch(new URL('/api/user/info?id=999&userId=999', baseUrl), {
-    method,
-    headers: {
-      Authorization: `Bearer ${createAccessToken(userId)}`,
-      'Content-Type': 'application/json',
-    },
-    ...(body === undefined ? {} : { body: JSON.stringify(body) }),
-    signal: AbortSignal.timeout(15_000),
-  })
-}
+const request = (userId: string, method: string, body?: unknown) =>
+  apiRequest(userId, method, '/user/info?id=999&userId=999', body)
 
 void describe('profile updates persist', { concurrency: false }, () => {
   for (const role of ['TENANT', 'LANDLORD'] as const) {

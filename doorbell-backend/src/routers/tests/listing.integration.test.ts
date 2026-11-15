@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict'
+import { apiRequest } from './helpers/utils.js'
 import { beforeEach, describe, test } from 'node:test'
 import { setTimeout as delay } from 'node:timers/promises'
 import { GetObjectCommand, S3ServiceException } from '@aws-sdk/client-s3'
@@ -297,11 +298,8 @@ void describe(
         ).rows
       })
 
-      const getListing = async (userId?: string) => {
-        if (userId === undefined) return publicRequest('GET', '/1')
-        const { createAccessToken } = await import('../../utils/jwt.js')
-        return requestAs(createAccessToken(userId), 'GET', '/1')
-      }
+      const getListing = (userId?: string) =>
+        apiRequest(userId, 'GET', '/listing/1')
 
       for (const [description, userId] of [
         ['anonymous visitor', undefined],
