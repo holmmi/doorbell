@@ -107,8 +107,9 @@ const HomeContent = ({
     filters: FeedFilters
     code: string
   } | null>(null)
-  const [likeNotice, setLikeNotice] = useState<FeedFilters | null>(null)
-  const [signUpOpen, setSignUpOpen] = useState<FeedFilters | null>(null)
+  const [likeNotice, setLikeNotice] = useState(false)
+  const [signUpOpen, setSignUpOpen] = useState(false)
+  const latestFiltersRef = useRef(filters)
   const deck = (result?.listings ?? []).filter(
     (listing) => !decided.has(listing.id)
   )
@@ -153,22 +154,29 @@ const HomeContent = ({
     filters.neighborhood !== '' ||
     filters.maxPrice > 0 ||
     filters.minSize > 0
-  const clearFilters = () => setFilters({ ...noFilters })
+  const handleFiltersChange = (nextFilters: FeedFilters) => {
+    latestFiltersRef.current = nextFilters
+    setLikeNotice(false)
+    setSignUpOpen(false)
+    setFilters(nextFilters)
+  }
+  const clearFilters = () => handleFiltersChange({ ...noFilters })
 
   const handleDecide = async (listing: HomeListing, liked: boolean) => {
     if (viewer === 'ANONYMOUS') {
-      setSignUpOpen(filters)
+      setSignUpOpen(true)
       return
     }
     if (viewer !== 'TENANT' || savingRef.current) return
     savingRef.current = true
     setSaving(true)
     setSaveError(null)
-    setLikeNotice(null)
+    setLikeNotice(false)
     try {
       await savePreference(listing.id, liked)
       setDecided((current) => new Set(current).add(listing.id))
-      setLikeNotice(liked ? filters : null)
+      // A completed save must not show a notice for an old filter selection.
+      setLikeNotice(liked && latestFiltersRef.current === filters)
       // A filter request may have raced this write. Reload its response so
       // already decided listings cannot hide additional matching homes.
       setResult((current) => (current?.filters !== filters ? null : current))
@@ -214,7 +222,11 @@ const HomeContent = ({
           {t('home.subtitle')}
         </Typography>
 
-        <FilterBar filters={filters} options={options} onChange={setFilters} />
+        <FilterBar
+          filters={filters}
+          options={options}
+          onChange={handleFiltersChange}
+        />
 
         {optionsError ? (
           <Alert
@@ -314,7 +326,7 @@ const HomeContent = ({
             : t('home.deck.hint')}
         </Typography>
 
-        {!loading && likeNotice === filters ? (
+        {!loading && likeNotice ? (
           <Box
             role="status"
             sx={{
@@ -358,8 +370,8 @@ const HomeContent = ({
       <Faq />
 
       <Dialog
-        open={!loading && signUpOpen === filters}
-        onClose={() => setSignUpOpen(null)}
+        open={!loading && signUpOpen}
+        onClose={() => setSignUpOpen(false)}
         slotProps={{ paper: { sx: { borderRadius: '24px', p: 1 } } }}
       >
         <DialogTitle sx={{ fontSize: 24, fontWeight: 700 }}>
