@@ -4,22 +4,30 @@ import type {
   ApplicantDecision,
   ApplicantDecisionResponse,
   LandlordMatch,
+  ListingPreferenceResponse,
   PendingApplicant,
 } from '../types/listingInteraction'
+
+const listingInteractionPath = (listingId: string) =>
+  `/listing-interaction/${encodeURIComponent(listingId)}`
+
+export const getMatches = (signal?: AbortSignal): Promise<MatchResponse[]> =>
+  authenticatedClient.request<MatchResponse[]>(
+    '/listing-interaction/tenant-matches',
+    { signal }
+  )
 
 export const savePreference = (
   listingId: string,
   liked: boolean
-): Promise<void> =>
-  authenticatedClient.request<void>(
-    `/listing-interaction/${encodeURIComponent(listingId)}/preference`,
-    { method: 'POST', body: { liked } }
+): Promise<ListingPreferenceResponse> =>
+  authenticatedClient.request<ListingPreferenceResponse>(
+    `${listingInteractionPath(listingId)}/preference`,
+    {
+      method: 'POST',
+      body: { liked },
+    }
   )
-
-export const getMatches = (signal?: AbortSignal): Promise<MatchResponse[]> =>
-  authenticatedClient.request<MatchResponse[]>('/listing-interaction/matches', {
-    signal,
-  })
 
 export const getPendingApplicants = (
   signal?: AbortSignal
@@ -40,7 +48,7 @@ export const decideApplicant = (
   decision: ApplicantDecision
 ): Promise<ApplicantDecisionResponse> =>
   authenticatedClient.request<ApplicantDecisionResponse>(
-    `/listing-interaction/${encodeURIComponent(listingId)}/applicants/${encodeURIComponent(tenantId)}/decision`,
+    `${listingInteractionPath(listingId)}/applicants/${encodeURIComponent(tenantId)}/decision`,
     {
       method: 'POST',
       body: { decision },
