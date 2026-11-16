@@ -11,7 +11,7 @@ import {
 import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router'
-import { ApiError } from '../api/client'
+import { ApiError, getToken } from '../api/client'
 import { getFeed, getFilterOptions } from '../api/listingClient'
 import { savePreference } from '../api/listingInteractionClient'
 import { EmptyDeck } from '../components/home/EmptyDeck'
@@ -92,7 +92,8 @@ const HomeContent = ({
   retryOptions,
 }: HomeContentProps) => {
   const { t } = useTranslation()
-  const { user, status } = useAuth()
+  const { user, status, logout } = useAuth()
+  const activeRef = useRef(false)
   const viewer = status === 'loading' ? 'LOADING' : (user?.role ?? 'ANONYMOUS')
   const [today] = useState(() => toIsoDate(new Date()))
   const [result, setResult] = useState<{
@@ -117,6 +118,13 @@ const HomeContent = ({
     result?.filters === filters &&
     result.listings.length > 0 &&
     deck.length === 0
+
+  useEffect(() => {
+    activeRef.current = true
+    return () => {
+      activeRef.current = false
+    }
+  }, [])
 
   useEffect(() => {
     if (status === 'loading') return
@@ -172,19 +180,32 @@ const HomeContent = ({
     setSaving(true)
     setSaveError(null)
     setLikeNotice(false)
-    try {
-      await savePreference(listing.id, liked)
+    const token = getToken()
+    const isCurrentSession = () => activeRef.current && getToken() === token
+    const removeListing = () => {
       setDecided((current) => new Set(current).add(listing.id))
-      // A completed save must not show a notice for an old filter selection.
-      setLikeNotice(liked && latestFiltersRef.current === filters)
       // A filter request may have raced this write. Reload its response so
       // already decided listings cannot hide additional matching homes.
       setResult((current) => (current?.filters !== filters ? null : current))
+    }
+    try {
+      await savePreference(listing.id, liked)
+      if (!isCurrentSession()) return
+      removeListing()
+      // A completed save must not show a notice for an old filter selection.
+      setLikeNotice(liked && latestFiltersRef.current === filters)
     } catch (error: unknown) {
+      if (!isCurrentSession()) return
+      if (error instanceof ApiError && error.status === 401) {
+        logout()
+        return
+      }
       setSaveError({ filters, code: errorCodeOf(error) })
+      // A saved preference or unavailable listing cannot be retried.
+      if (error instanceof ApiError && error.status === 409) removeListing()
     } finally {
       savingRef.current = false
-      setSaving(false)
+      if (activeRef.current) setSaving(false)
     }
   }
 
