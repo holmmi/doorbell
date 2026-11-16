@@ -6,34 +6,13 @@ import type {
 } from '../../types/listingInteraction.js'
 import {
   pool,
-  baseUrl,
   seedPublishedListing,
   readListing,
   update,
   waitForBlockedConnection,
 } from './helpers/integration.js'
 
-const apiRequest = async (
-  userId: string | undefined,
-  method: string,
-  path: string,
-  body?: unknown,
-  authorization?: string
-) => {
-  const { createAccessToken } = await import('../../utils/jwt.js')
-  return fetch(new URL(`/api${path}`, baseUrl), {
-    method,
-    headers: {
-      ...(userId === undefined
-        ? {}
-        : { Authorization: `Bearer ${createAccessToken(userId)}` }),
-      ...(authorization === undefined ? {} : { Authorization: authorization }),
-      'Content-Type': 'application/json',
-    },
-    ...(body === undefined ? {} : { body: JSON.stringify(body) }),
-    signal: AbortSignal.timeout(15_000),
-  })
-}
+import { apiRequest } from './helpers/utils.js'
 
 const preference = (tenantId = '2', liked = true, listingId = '1') =>
   apiRequest(tenantId, 'POST', `/listing-interaction/${listingId}/preference`, {

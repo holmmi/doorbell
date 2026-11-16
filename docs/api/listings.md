@@ -22,6 +22,57 @@ ascending ID order.
 An invalid bearer token returns HTTP 401. Authenticated requests may use any
 valid user role; this endpoint is not restricted to landlords.
 
+### Feed filters
+
+All filters are optional and combine with AND. Eligibility and filtering happen
+in the database **before** ascending ID ordering and the 2/10 listing limit.
+Omitting filters preserves the unfiltered feed behavior.
+
+```http
+GET /api/listing?city=Helsinki&neighborhood=Kallio&maxPrice=1500&minSize=30
+```
+
+| Query parameter | Meaning |
+| --------------- | ------- |
+| `city` | Exact city match, ignoring case and surrounding whitespace. |
+| `neighborhood` | Exact neighborhood match within `city`, with the same normalization. Requires a nonblank `city`. |
+| `maxPrice` | Inclusive maximum monthly base rent in EUR (`monthlyPrice`); excludes `extraCosts`. |
+| `minPrice` | Inclusive minimum monthly base rent in EUR; omit `maxPrice` for an open-ended band such as `minPrice=3000`. |
+| `minSize` | Inclusive minimum floor area in m² (`squareMeters`), independent of `rooms`. |
+
+Blank or whitespace-only location filters are omitted. For example,
+`?city=Helsinki` selects the whole city, while
+`?city=Helsinki&neighborhood=Kallio` selects that neighborhood only. Unknown
+cities or city/neighborhood combinations return HTTP 200 with `[]`.
+Values are URL query strings; URL-encode spaces and other special characters.
+
+Numeric filters accept positive, finite decimal values with up to two decimal
+places, optionally surrounded by whitespace: for example `1250`, `1250.5` or
+`1250.50`. The maximum is `99999999.99` for `minPrice`/`maxPrice` and `999999.99` for
+`minSize`. Zero, negative values, empty values, exponent/hex notation,
+non-numbers, excess decimal places and values above these bounds are invalid.
+Omit the frontend's zero/no-limit sentinel from requests.
+If both price bounds are supplied, `minPrice` must be at most `maxPrice`.
+Omit both for any price. `?minPrice=3000` selects EUR 3,000 and higher;
+`?minPrice=2000&maxPrice=2999.99` selects the preceding band.
+
+Invalid filters return HTTP 400 with `{ "errors": [...] }`, the existing Zod
+issue format. This includes repeated parameters, array/object values (including
+bracket notation such as `city[]` or `maxPrice[value]`) and a nonblank
+`neighborhood` without a city. Each issue includes `code`, `path` and `message`;
+the missing-city issue has `path: ["neighborhood"]` and translation key
+`error.listing.filter.cityRequired` in `message`. Bracket notation produces
+`error.listing.filter.singleValueRequired` at the affected filter's path.
+A minimum above the maximum produces `error.listing.filter.invalidPriceRange`
+at `path: ["minPrice"]`.
+The schemas use Zod 4's supported `error` option for refinements;
+`context.addIssue()` and response issues use `message`. Unknown fields are stripped.
+Invalid supplied bearer tokens still return HTTP 401 before query validation,
+using `{"error":"error.authentication.unauthorized"}` as described in
+[Users and authentication](users.md).
+
+### Feed response
+
 Each listing includes its finalized images. `imageUrl` is a pre-signed S3 GET
 URL that can be used directly as an HTML image `src`, together with the image
 ID and display order. These URLs expire after 900 seconds and must be
@@ -52,6 +103,62 @@ listing responses.
   }
 ]
 ```
+
+## Filter options
+
+`GET /api/listing/filter-options` returns HTTP 200 with listing-derived locations
+and fixed price bands
+for the main view. Authentication is optional: anonymous visitors and valid
+authenticated callers of either role may access it. An invalid or expired
+supplied bearer token returns HTTP 401 with
+`{"error":"error.authentication.unauthorized"}`.
+
+```json
+{
+  "locations": [
+    { "city": "Helsinki", "neighborhoods": ["Kallio", "Kamppi"] },
+    { "city": "Tampere", "neighborhoods": ["Keskusta"] }
+  ],
+  "priceRanges": [
+    { "minPrice": null, "maxPrice": "499.99" },
+    { "minPrice": "500.00", "maxPrice": "999.99" },
+    { "minPrice": "1000.00", "maxPrice": "1999.99" },
+    { "minPrice": "2000.00", "maxPrice": "2999.99" },
+    { "minPrice": "3000.00", "maxPrice": null }
+  ]
+}
+```
+
+Location options come from **all published listings**, independently of the feed limit
+or selected filters. They are not personalized: own listings and existing
+likes/dislikes still contribute, so swiping does not remove choices. Drafts
+never contribute. Publication and listing updates are reflected on the next
+request.
+
+Cities and their neighborhoods are trimmed, deduplicated case-insensitively
+using the same normalization as feed matching, and sorted alphabetically.
+Display text comes from listings; when casing differs, the smallest trimmed
+value in JavaScript's default string sort order is selected deterministically.
+Normalization uses JavaScript's native `trim()` and `toLowerCase()` for both
+stored locations and filter values. Blank cities
+are omitted; blank neighborhoods are omitted from their city's array. A city
+without a nonblank neighborhood has `neighborhoods: []`. The same neighborhood
+name in two cities remains a separate choice under each city. Send both city
+and neighborhood to select one of these choices.
+
+`priceRanges` replaces `maxPrices` and always contains the fixed bands above:
+under EUR 500, EUR 500–<1,000, EUR 1,000–<2,000, EUR 2,000–<3,000, and EUR 3,000+.
+Bounds are inclusive decimal strings with two decimal places; `null` means
+there is no bound. Send each non-null bound as its matching query parameter
+and omit null bounds. The EUR 3,000+ choice sends only `minPrice=3000.00`.
+The bands cover every valid rent without gaps or overlaps, including exactly
+EUR 3,000 in the final band. For "Any price", omit both bounds.
+The feed still accepts custom price bounds, and the frontend may define size
+thresholds using `minSize`.
+
+An empty or draft-only dataset returns `locations: []` with the same fixed
+`priceRanges` choices. Bands do not change when listings are added or updated.
+The response contains only these options, without account data or storage keys.
 
 ## My listings
 

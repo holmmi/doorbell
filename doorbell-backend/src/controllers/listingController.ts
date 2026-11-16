@@ -2,13 +2,16 @@ import type { RequestHandler } from 'express'
 
 import {
   createListing,
-  findListingFeed,
   findOwnedListings,
   publishListing,
   registerListingImageUpload,
   withOwnedListing,
 } from '../repositories/listingRepository.js'
 import { createPresignedImageUpload } from '../services/imageService.js'
+import {
+  getListingFeed,
+  getListingFilterOptions,
+} from '../services/listingFeedService.js'
 import {
   listingFeedResponse,
   listingImageResponse,
@@ -26,6 +29,7 @@ import type {
   ListingUpdateInput,
 } from '../types/listing.js'
 import { resourceIdFromRequest } from '../utils/resourceId.js'
+import { listingFeedQuerySchema } from '../schemas/listing.js'
 
 const listingResponse = async (
   listing: ListingDetails
@@ -57,12 +61,25 @@ export const getRentalListingFeed: RequestHandler = async (
   request,
   response
 ) => {
-  const listings = await findListingFeed(
+  const filters = listingFeedQuerySchema.safeParse(request.query)
+  if (!filters.success) {
+    response.status(400).json({ errors: filters.error.issues })
+    return
+  }
+  const listings = await getListingFeed(
     request.auth?.userId,
-    request.auth?.userId ? 10 : 2
+    request.auth?.userId ? 10 : 2,
+    filters.data
   )
   const result = await Promise.all(listings.map(listingFeedResponse))
   response.json(result)
+}
+
+export const getRentalListingFilterOptions: RequestHandler = async (
+  _request,
+  response
+) => {
+  response.json(await getListingFilterOptions())
 }
 
 export const getMyRentalListings: RequestHandler = async (

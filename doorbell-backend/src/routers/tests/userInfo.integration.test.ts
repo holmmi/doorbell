@@ -6,29 +6,21 @@ import jwt from 'jsonwebtoken'
 
 import type { UserInfo, UserInfoResponse } from '../../types/user.js'
 import { baseUrl, pool } from './helpers/integration.js'
+import { apiRequest } from './helpers/utils.js'
 
-const request = async (
+const request = (
   userId: string,
   method: string,
   body?: unknown,
   authorization?: string | null
-) => {
-  const { createAccessToken } = await import('../../utils/jwt.js')
-  return fetch(new URL('/api/user/info?id=1&userId=1', baseUrl), {
+) =>
+  apiRequest(
+    authorization === null ? undefined : userId,
     method,
-    headers: {
-      ...(authorization === null
-        ? {}
-        : {
-            Authorization:
-              authorization ?? `Bearer ${createAccessToken(userId)}`,
-          }),
-      'Content-Type': 'application/json',
-    },
-    ...(body === undefined ? {} : { body: JSON.stringify(body) }),
-    signal: AbortSignal.timeout(15_000),
-  })
-}
+    '/user/info?id=1&userId=1',
+    body,
+    authorization ?? undefined
+  )
 
 const storedUsers = async () =>
   (

@@ -7,6 +7,8 @@ import type {
   Listing,
   ListingDetails,
   ListingFeedItem,
+  ListingFeedDatabaseFilters,
+  ListingLocation,
   ListingImage,
   ListingInput,
 } from '../types/listing.js'
@@ -146,7 +148,8 @@ export const findOwnedListings = async (
 
 export const findListingFeed = async (
   userId: string | undefined,
-  limit: number
+  limit: number,
+  filters: ListingFeedDatabaseFilters = {}
 ): Promise<ListingFeedItem[]> => {
   const result = await pool.query<ListingFeedItem>(
     `SELECT ${listingColumns}
@@ -161,9 +164,22 @@ export const findListingFeed = async (
              AND preference.rental_listing_id = listing.id
          )
        )
+       AND ($3::TEXT[] IS NULL OR listing.city = ANY($3))
+       AND ($4::TEXT[] IS NULL OR listing.neighborhood = ANY($4))
+       AND ($5::NUMERIC IS NULL OR listing.monthly_price <= $5)
+       AND ($6::NUMERIC IS NULL OR listing.square_meters >= $6)
+       AND ($7::NUMERIC IS NULL OR listing.monthly_price >= $7)
      ORDER BY listing.id
      LIMIT $2`,
-    [userId ?? null, limit]
+    [
+      userId ?? null,
+      limit,
+      filters.cities ?? null,
+      filters.neighborhoods ?? null,
+      filters.maxPrice ?? null,
+      filters.minSize ?? null,
+      filters.minPrice ?? null,
+    ]
   )
 
   const listings = await Promise.all(
@@ -178,6 +194,13 @@ export const findListingFeed = async (
   )
 
   return listings
+}
+
+export const findPublishedLocations = async (): Promise<ListingLocation[]> => {
+  const result = await pool.query<ListingLocation>(
+    'SELECT DISTINCT city, neighborhood FROM rental_listing WHERE published'
+  )
+  return result.rows
 }
 
 export const updateListing = async (

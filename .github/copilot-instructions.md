@@ -130,8 +130,9 @@ Pinned `@testcontainers/postgresql` and `@testcontainers/s3mock` packages start
 disposable PostgreSQL 18.6 and Adobe S3Mock 5.2.3 containers on random ports.
 Their shared `src/routers/tests/helpers/integration.ts` fixture applies the
 migration SQL files directly, configures the backend before importing it, and
-cleans up containers even after setup/test failures. The suites cover listing
-creation, public reads, draft privacy, updates, image uploads, publication,
+cleans up containers even after setup/test failures. Shared authenticated/public
+HTTP requests live in `src/routers/tests/helpers/utils.ts`. The suites cover listing
+creation, filtering, public reads, draft privacy, updates, image uploads, publication,
 background cleanup, preferences, applicants, matches and profile updates.
 Test-only triggers exercise deferred constraint rollback and, with
 `pg_blocking_pids`, coordinate concurrent HTTP updates without fixed sleeps.
