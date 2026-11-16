@@ -16,6 +16,7 @@ interface SwipeDeckProps {
   listings: HomeListing[]
   today: string
   canSwipe: boolean
+  saving?: boolean
   onDecide: (listing: HomeListing, liked: boolean) => void
 }
 
@@ -45,6 +46,7 @@ export function SwipeDeck({
   listings,
   today,
   canSwipe,
+  saving = false,
   onDecide,
 }: SwipeDeckProps) {
   const { t } = useTranslation()
@@ -65,7 +67,7 @@ export function SwipeDeck({
   // Animate the top card away, then hand the decision to the parent. The
   // parent either removes the card or keeps it, in which case it springs back.
   const flyOut = (direction: Direction) => {
-    if (!top || exit !== null) return
+    if (!top || !canSwipe || saving || exit !== null) return
     setDragging(false)
     setExit(direction)
     exitTimerRef.current = window.setTimeout(() => {
@@ -80,7 +82,13 @@ export function SwipeDeck({
   }
 
   const handlePointerDown = (event: PointerEvent<HTMLDivElement>) => {
-    if (!canSwipe || exit !== null || !event.isPrimary || event.button !== 0) {
+    if (
+      !canSwipe ||
+      saving ||
+      exit !== null ||
+      !event.isPrimary ||
+      event.button !== 0
+    ) {
       return
     }
     pointerStartXRef.current = event.clientX
@@ -196,6 +204,7 @@ export function SwipeDeck({
         <Box sx={{ mt: 4, display: 'flex', justifyContent: 'center', gap: 5 }}>
           <IconButton
             aria-label={t('home.deck.dislike')}
+            disabled={saving}
             onClick={() => flyOut(-1)}
             sx={actionButtonSx('error.main', 'rgba(239, 122, 133, 0.4)')}
           >
@@ -203,6 +212,7 @@ export function SwipeDeck({
           </IconButton>
           <IconButton
             aria-label={t('home.deck.like')}
+            disabled={saving}
             onClick={() => flyOut(1)}
             sx={actionButtonSx('primary.main', 'rgba(110, 68, 255, 0.4)')}
           >
