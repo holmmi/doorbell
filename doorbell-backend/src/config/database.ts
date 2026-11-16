@@ -6,6 +6,7 @@ const requiredEnvironmentVariables = [
   'DB_NAME',
   'DB_USER',
   'DB_PASSWORD',
+  'DB_SSL',
 ] as const
 
 const missingEnvironmentVariables = requiredEnvironmentVariables.filter(
@@ -24,12 +25,17 @@ if (!Number.isInteger(dbPort) || dbPort < 1 || dbPort > 65535) {
   throw new Error('DB_PORT must be a valid TCP port number')
 }
 
+if (process.env.DB_SSL !== 'true' && process.env.DB_SSL !== 'false') {
+  throw new Error('DB_SSL must be either "true" or "false"')
+}
+
 export const pool = new Pool({
   host: process.env.DB_HOST,
   port: dbPort,
   database: process.env.DB_NAME,
   user: process.env.DB_USER,
   password: process.env.DB_PASSWORD,
+  ssl: process.env.DB_SSL === 'true' ? { rejectUnauthorized: false } : false,
 })
 
 pool.on('error', (error) => {

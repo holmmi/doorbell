@@ -41,6 +41,7 @@ export const createPresignedImageUpload = async (
   })
   const uploadUrl = await getSignedUrl(client, command, {
     expiresIn: uploadUrlLifetimeSeconds,
+    signableHeaders: new Set(['content-type']),
   })
 
   return { objectKey, uploadUrl, expiresIn: uploadUrlLifetimeSeconds }
@@ -59,7 +60,9 @@ export const createPresignedImageDownload = async (
 
 export const verifyImageObject = async (
   objectKey: string,
-  expectedContentType: string
+  expectedContentType: string,
+  errorPrefix:
+    'error.listing.image' | 'error.user.picture' = 'error.listing.image'
 ): Promise<void> => {
   const { bucket, client } = getObjectStorage()
   try {
@@ -69,16 +72,17 @@ export const verifyImageObject = async (
     if (
       object.ContentType !== expectedContentType ||
       !allowedContentTypes.has(object.ContentType) ||
-      !object.ContentLength
+      !object.ContentLength ||
+      object.ContentLength < 0
     ) {
-      throw new RequestError(400, 'error.listing.image.invalidObject')
+      throw new RequestError(400, `${errorPrefix}.invalidObject`)
     }
   } catch (error) {
     if (
       error instanceof S3ServiceException &&
       error.$metadata.httpStatusCode === 404
     ) {
-      throw new RequestError(409, 'error.listing.image.notUploaded')
+      throw new RequestError(409, `${errorPrefix}.notUploaded`)
     }
     throw error
   }
@@ -95,4 +99,12 @@ export const isListingKey = (objectKey: string, listingId: string): boolean =>
 export const isProfilePictureKey = (
   objectKey: string,
   userId: string
-): boolean => objectKey.startsWith(`users/${userId}/`)
+): boolean => {
+  const prefix = `users/${userId}/`
+  // Legacy saved references must not traverse out of the account's namespace
+  // when converted into a URL. Issued uploads always use a simple UUID filename.
+  return (
+    objectKey.startsWith(prefix) &&
+    /^[a-zA-Z0-9_-]+\.(png|jpg|jpeg)$/.test(objectKey.slice(prefix.length))
+  )
+}

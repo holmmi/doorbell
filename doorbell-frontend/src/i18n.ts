@@ -18,21 +18,22 @@ const resources = {
         avatarAlt: 'Profile picture',
       },
       home: {
+        retry: 'Retry',
         title: 'Find your next home, one swipe at a time',
         subtitle: 'Like a home and the landlord gets a ring.',
         filters: {
-          city: 'City',
-          neighborhood: 'Neighbourhood',
+          location: 'Location',
           maxPrice: 'Max price',
           size: 'Size',
-          anyCity: 'Any city',
-          allAreas: 'All areas',
+          anyLocation: 'Any location',
+          wholeCity: '{{city}} — all neighbourhoods',
+          neighborhoodInCity: '{{city}} / {{neighborhood}}',
+          loading: 'Loading filter choices…',
+          loadError: 'We could not load location choices.',
           noLimit: 'No limit',
           anySize: 'Any size',
           price: '€{{price}}',
           minSize: '{{size}}+ m²',
-          matchCount_one: '{{count}} home matches your filters',
-          matchCount_other: '{{count}} homes match your filters',
         },
         rooms: {
           STUDIO: 'Studio',
@@ -56,6 +57,11 @@ const resources = {
           showPhoto: 'Show photo {{number}}',
         },
         deck: {
+          loading: 'Loading homes…',
+          loadError: 'We could not load homes. Please retry.',
+          saving: 'Saving your choice…',
+          saveError: 'We could not save your choice. Please try swiping again.',
+          noMatches: 'No homes match your filters',
           like: 'Like',
           dislike: 'Dislike',
           likeStamp: 'YUP!',
@@ -67,7 +73,7 @@ const resources = {
           emptyBody: 'Try a different location or a higher max price.',
           clearFilters: 'Clear filters',
           signUpTitle: 'Sign up to see every home',
-          signUpDialogTitle: 'Create an account to like homes',
+          signUpDialogTitle: 'Create an account to like or skip homes',
         },
         how: {
           title: 'How Doorbell works',
@@ -305,6 +311,18 @@ const resources = {
         },
       },
       error: {
+        user: {
+          picture: {
+            invalidKey:
+              'This profile picture upload has expired or is invalid. Please upload it again.',
+            invalidObject:
+              'This profile picture is empty or does not match its file type.',
+            notUploaded:
+              'This profile picture has not finished uploading. Please try again.',
+            storageUnavailable:
+              'Profile picture storage is unavailable. Please try again later.',
+          },
+        },
         listing: {
           notFound: 'This listing could not be found.',
           unavailable: 'This listing is no longer available.',
@@ -319,6 +337,11 @@ const resources = {
           applicant: {
             notFound: 'This applicant could not be found for the listing.',
             notInterested: 'This tenant is not interested in the listing.',
+          },
+          filter: {
+            cityRequired: 'Choose a city before choosing a neighborhood.',
+            singleValueRequired: 'Provide a single value for each filter.',
+            invalidPriceRange: 'Minimum rent must not exceed maximum rent.',
           },
           images: {
             incomplete:

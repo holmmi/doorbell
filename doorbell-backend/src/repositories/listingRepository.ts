@@ -7,6 +7,8 @@ import type {
   Listing,
   ListingDetails,
   ListingFeedItem,
+  ListingFeedDatabaseFilters,
+  ListingLocation,
   ListingImage,
   ListingInput,
 } from '../types/listing.js'
@@ -124,9 +126,30 @@ export const getListingDetails = async (
   return { ...listing, ready: images.length > 0, images }
 }
 
+export const findOwnedListings = async (
+  ownerId: string
+): Promise<ListingDetails[]> => {
+  const client = await pool.connect()
+  try {
+    const result = await client.query<Listing>(
+      `SELECT ${listingColumns} FROM rental_listing
+       WHERE owner_id = $1 ORDER BY id`,
+      [ownerId]
+    )
+    const listings: ListingDetails[] = []
+    for (const listing of result.rows) {
+      listings.push(await getListingDetails(client, listing))
+    }
+    return listings
+  } finally {
+    client.release()
+  }
+}
+
 export const findListingFeed = async (
   userId: string | undefined,
-  limit: number
+  limit: number,
+  filters: ListingFeedDatabaseFilters = {}
 ): Promise<ListingFeedItem[]> => {
   const result = await pool.query<ListingFeedItem>(
     `SELECT ${listingColumns}
@@ -141,9 +164,22 @@ export const findListingFeed = async (
              AND preference.rental_listing_id = listing.id
          )
        )
+       AND ($3::TEXT[] IS NULL OR listing.city = ANY($3))
+       AND ($4::TEXT[] IS NULL OR listing.neighborhood = ANY($4))
+       AND ($5::NUMERIC IS NULL OR listing.monthly_price <= $5)
+       AND ($6::NUMERIC IS NULL OR listing.square_meters >= $6)
+       AND ($7::NUMERIC IS NULL OR listing.monthly_price >= $7)
      ORDER BY listing.id
      LIMIT $2`,
-    [userId ?? null, limit]
+    [
+      userId ?? null,
+      limit,
+      filters.cities ?? null,
+      filters.neighborhoods ?? null,
+      filters.maxPrice ?? null,
+      filters.minSize ?? null,
+      filters.minPrice ?? null,
+    ]
   )
 
   const listings = await Promise.all(
@@ -158,6 +194,13 @@ export const findListingFeed = async (
   )
 
   return listings
+}
+
+export const findPublishedLocations = async (): Promise<ListingLocation[]> => {
+  const result = await pool.query<ListingLocation>(
+    'SELECT DISTINCT city, neighborhood FROM rental_listing WHERE published'
+  )
+  return result.rows
 }
 
 export const updateListing = async (
@@ -259,14 +302,4 @@ export const consumeListingImageUpload = async (
     throw new RequestError(400, 'error.listing.image.invalidKey')
   }
   return result.rows[0].contentType
-}
-
-export const queueListingImageCleanup = async (
-  client: PoolClient,
-  objectKey: string
-): Promise<void> => {
-  await client.query(
-    'INSERT INTO listing_image_cleanup (object_key) VALUES ($1) ON CONFLICT DO NOTHING',
-    [objectKey]
-  )
 }

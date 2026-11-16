@@ -6,14 +6,13 @@ import {
   DialogActions,
   DialogTitle,
   Skeleton,
-  Snackbar,
   Typography,
 } from '@mui/material'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router'
-import { ApiError } from '../api/client'
-import { getFeed } from '../api/listingClient'
+import { ApiError, getToken } from '../api/client'
+import { getFeed, getFilterOptions } from '../api/listingClient'
 import { savePreference } from '../api/listingInteractionClient'
 import { EmptyDeck } from '../components/home/EmptyDeck'
 import { Faq } from '../components/home/Faq'
@@ -25,7 +24,11 @@ import { SwipeDeck } from '../components/home/SwipeDeck'
 import { Testimonials } from '../components/home/Testimonials'
 import { useAuth } from '../hooks/useAuth'
 import { toIsoDate } from '../utils/format'
-import type { FeedFilters, HomeListing } from '../types/listing'
+import type {
+  FeedFilters,
+  HomeListing,
+  ListingFilterOptions,
+} from '../types/listing'
 
 const noFilters: FeedFilters = {
   city: '',
@@ -37,92 +40,165 @@ const noFilters: FeedFilters = {
 const errorCodeOf = (error: unknown) =>
   error instanceof ApiError ? error.code : 'error.unknown'
 
-const sameText = (a: string, b: string) =>
-  a.localeCompare(b, undefined, { sensitivity: 'base' }) === 0
-
-// TODO: send filters to GET /api/listing once the backend supports them.
-const matchesFilters = (listing: HomeListing, filters: FeedFilters) =>
-  (!filters.city || sameText(listing.city, filters.city)) &&
-  (!filters.neighborhood ||
-    sameText(listing.neighborhood, filters.neighborhood)) &&
-  (!filters.maxPrice || listing.monthlyPrice <= filters.maxPrice) &&
-  (!filters.minSize || listing.squareMeters >= filters.minSize)
-
 export const HomeView = () => {
-  const { t } = useTranslation()
-  const { user, status, logout } = useAuth()
-  const viewer = status === 'loading' ? 'LOADING' : (user?.role ?? 'ANONYMOUS')
-  const [today] = useState(() => toIsoDate(new Date()))
-  const [listings, setListings] = useState<HomeListing[] | null>(null)
-  const [decided, setDecided] = useState<ReadonlySet<string>>(() => new Set())
+  const { user, status } = useAuth()
   const [filters, setFilters] = useState<FeedFilters>(noFilters)
-  const [likeNotice, setLikeNotice] = useState(false)
-  const [signUpOpen, setSignUpOpen] = useState(false)
-  const [errorCode, setErrorCode] = useState<string | null>(null)
+  const [options, setOptions] = useState<ListingFilterOptions | null>(null)
+  const [optionsError, setOptionsError] = useState<string | null>(null)
+  const [optionsAttempt, setOptionsAttempt] = useState(0)
 
   useEffect(() => {
     let ignore = false
-    getFeed()
-      .then((feed) => {
-        if (!ignore) setListings(feed)
+    getFilterOptions()
+      .then((result) => {
+        if (!ignore) setOptions(result)
       })
       .catch((error: unknown) => {
-        if (ignore) return
-        setListings([])
-        setErrorCode(errorCodeOf(error))
+        if (!ignore) setOptionsError(errorCodeOf(error))
       })
     return () => {
       ignore = true
     }
+  }, [optionsAttempt])
+
+  return (
+    <HomeContent
+      key={`${status}:${user?.id ?? ''}:${user?.role ?? ''}`}
+      filters={filters}
+      setFilters={setFilters}
+      options={options}
+      optionsError={optionsError}
+      retryOptions={() => {
+        setOptionsError(null)
+        setOptionsAttempt((attempt) => attempt + 1)
+      }}
+    />
+  )
+}
+
+interface HomeContentProps {
+  filters: FeedFilters
+  setFilters: (filters: FeedFilters) => void
+  options: ListingFilterOptions | null
+  optionsError: string | null
+  retryOptions: () => void
+}
+
+const HomeContent = ({
+  filters,
+  setFilters,
+  options,
+  optionsError,
+  retryOptions,
+}: HomeContentProps) => {
+  const { t } = useTranslation()
+  const { user, status, logout } = useAuth()
+  const activeRef = useRef(false)
+  const viewer = status === 'loading' ? 'LOADING' : (user?.role ?? 'ANONYMOUS')
+  const [today] = useState(() => toIsoDate(new Date()))
+  const [result, setResult] = useState<{
+    filters: FeedFilters
+    listings: HomeListing[]
+    error: string | null
+  } | null>(null)
+  const [decided, setDecided] = useState<ReadonlySet<string>>(() => new Set())
+  const [saving, setSaving] = useState(false)
+  const savingRef = useRef(false)
+  const [saveError, setSaveError] = useState<{
+    filters: FeedFilters
+    code: string
+  } | null>(null)
+  const [likeNotice, setLikeNotice] = useState<FeedFilters | null>(null)
+  const [signUpOpen, setSignUpOpen] = useState<FeedFilters | null>(null)
+  const deck = (result?.listings ?? []).filter(
+    (listing) => !decided.has(listing.id)
+  )
+  const exhausted =
+    result?.filters === filters &&
+    result.listings.length > 0 &&
+    deck.length === 0
+
+  useEffect(() => {
+    activeRef.current = true
+    return () => {
+      activeRef.current = false
+    }
   }, [])
 
-  const loading = listings === null || viewer === 'LOADING'
+  useEffect(() => {
+    if (status === 'loading') return
+    // Saved preferences are excluded by the API. Refill only after consuming
+    // a nonempty response; an empty response or error must not cause a loop.
+    if (result?.filters === filters && (!exhausted || result.error)) return
+    let ignore = false
+    getFeed(filters)
+      .then((feed) => {
+        if (!ignore) {
+          setResult({
+            filters,
+            listings: feed.filter((listing) => !decided.has(listing.id)),
+            error: null,
+          })
+        }
+      })
+      .catch((error: unknown) => {
+        if (ignore) return
+        setResult({ filters, listings: [], error: errorCodeOf(error) })
+      })
+    return () => {
+      ignore = true
+    }
+  }, [filters, status, result, exhausted, decided])
+
+  // A response belongs to the exact selection that requested it. Hide the old
+  // deck during render, before effects run, and ignore responses after cleanup.
+  const loading =
+    result?.filters !== filters || viewer === 'LOADING' || exhausted
+  const errorCode = loading ? null : result?.error
   const canSwipe = viewer === 'TENANT' || viewer === 'ANONYMOUS'
   const filtersActive =
     filters.city !== '' ||
     filters.neighborhood !== '' ||
     filters.maxPrice > 0 ||
     filters.minSize > 0
-  const deck = (listings ?? []).filter(
-    (listing) => !decided.has(listing.id) && matchesFilters(listing, filters)
-  )
-  const neighborhoods = [
-    ...new Set(
-      (listings ?? [])
-        .filter(
-          (listing) => !filters.city || sameText(listing.city, filters.city)
-        )
-        .map((listing) => listing.neighborhood)
-    ),
-  ].sort((a, b) => a.localeCompare(b))
+  const clearFilters = () => setFilters({ ...noFilters })
 
-  const handleDecide = (listing: HomeListing, liked: boolean) => {
-    if (liked && viewer === 'ANONYMOUS') {
-      setSignUpOpen(true)
+  const handleDecide = async (listing: HomeListing, liked: boolean) => {
+    if (viewer === 'ANONYMOUS') {
+      setSignUpOpen(filters)
       return
     }
-    // Remove the card right away so the deck stays responsive. Anonymous
-    // dislikes are not saved and only last until the page reloads.
-    setDecided((current) => new Set(current).add(listing.id))
-    setLikeNotice(liked)
-    if (viewer !== 'TENANT') return
-
-    savePreference(listing.id, liked).catch((error: unknown) => {
+    if (viewer !== 'TENANT' || savingRef.current) return
+    savingRef.current = true
+    setSaving(true)
+    setSaveError(null)
+    setLikeNotice(null)
+    const token = getToken()
+    const isCurrentSession = () => activeRef.current && getToken() === token
+    const removeListing = () => {
+      setDecided((current) => new Set(current).add(listing.id))
+      // A filter request may have raced this write. Reload its response so
+      // already decided listings cannot hide additional matching homes.
+      setResult((current) => (current?.filters !== filters ? null : current))
+    }
+    try {
+      await savePreference(listing.id, liked)
+      if (!isCurrentSession()) return
+      removeListing()
+      setLikeNotice(liked ? filters : null)
+    } catch (error: unknown) {
+      if (!isCurrentSession()) return
       if (error instanceof ApiError && error.status === 401) {
         logout()
         return
       }
-      setErrorCode(errorCodeOf(error))
-      if (liked) setLikeNotice(false)
-      // A 409 means the listing was already reviewed or can no longer be
-      // reviewed, so retrying would not help. Otherwise return the card.
-      if (error instanceof ApiError && error.status === 409) return
-      setDecided((current) => {
-        const next = new Set(current)
-        next.delete(listing.id)
-        return next
-      })
-    })
+      setSaveError({ filters, code: errorCodeOf(error) })
+      // A saved preference or unavailable listing cannot be retried.
+      if (error instanceof ApiError && error.status === 409) removeListing()
+    } finally {
+      savingRef.current = false
+      if (activeRef.current) setSaving(false)
+    }
   }
 
   return (
@@ -159,11 +235,32 @@ export const HomeView = () => {
           {t('home.subtitle')}
         </Typography>
 
-        <FilterBar
-          filters={filters}
-          neighborhoods={neighborhoods}
-          onChange={setFilters}
-        />
+        <FilterBar filters={filters} options={options} onChange={setFilters} />
+
+        {optionsError ? (
+          <Alert
+            severity="error"
+            sx={{ mt: 2 }}
+            action={
+              <Button color="inherit" onClick={retryOptions}>
+                {t('home.retry')}
+              </Button>
+            }
+          >
+            {t('home.filters.loadError')}{' '}
+            {t(optionsError, { defaultValue: t('error.unknown') })}
+          </Alert>
+        ) : options === null ? (
+          <Typography role="status" sx={{ mt: 2 }}>
+            {t('home.filters.loading')}
+          </Typography>
+        ) : null}
+
+        {filtersActive ? (
+          <Button onClick={clearFilters} sx={{ mt: 2 }}>
+            {t('home.deck.clearFilters')}
+          </Button>
+        ) : null}
 
         <Typography
           role="status"
@@ -176,11 +273,14 @@ export const HomeView = () => {
           }}
         >
           {loading
-            ? null
-            : t('home.filters.matchCount', { count: deck.length })}
+            ? t('home.deck.loading')
+            : saving
+              ? t('home.deck.saving')
+              : null}
         </Typography>
 
         <Box
+          aria-busy={loading}
           sx={{ mt: '28px', width: 760, maxWidth: '100%', textAlign: 'left' }}
         >
           {loading ? (
@@ -189,22 +289,45 @@ export const HomeView = () => {
               height={640}
               sx={{ borderRadius: '24px' }}
             />
+          ) : errorCode ? (
+            <Alert
+              severity="error"
+              action={
+                <Button
+                  color="inherit"
+                  onClick={() => {
+                    setResult(null)
+                  }}
+                >
+                  {t('home.retry')}
+                </Button>
+              }
+            >
+              {t('home.deck.loadError')}{' '}
+              {t(errorCode, { defaultValue: t('error.unknown') })}
+            </Alert>
           ) : deck.length > 0 ? (
             <SwipeDeck
               listings={deck}
               today={today}
               canSwipe={canSwipe}
-              onDecide={handleDecide}
+              saving={saving}
+              onDecide={(listing, liked) => void handleDecide(listing, liked)}
             />
           ) : (
             <EmptyDeck
               signUp={viewer === 'ANONYMOUS' && !filtersActive}
-              onClearFilters={
-                filtersActive ? () => setFilters(noFilters) : undefined
-              }
+              onClearFilters={filtersActive ? clearFilters : undefined}
             />
           )}
         </Box>
+
+        {saveError?.filters === filters ? (
+          <Alert severity="error" sx={{ mt: 2 }}>
+            {t('home.deck.saveError')}{' '}
+            {t(saveError.code, { defaultValue: t('error.unknown') })}
+          </Alert>
+        ) : null}
 
         <Typography sx={{ mt: 4, fontSize: 18, color: 'text.secondary' }}>
           {viewer === 'LANDLORD'
@@ -212,7 +335,7 @@ export const HomeView = () => {
             : t('home.deck.hint')}
         </Typography>
 
-        {likeNotice ? (
+        {!loading && likeNotice === filters ? (
           <Box
             role="status"
             sx={{
@@ -256,8 +379,8 @@ export const HomeView = () => {
       <Faq />
 
       <Dialog
-        open={signUpOpen}
-        onClose={() => setSignUpOpen(false)}
+        open={!loading && signUpOpen === filters}
+        onClose={() => setSignUpOpen(null)}
         slotProps={{ paper: { sx: { borderRadius: '24px', p: 1 } } }}
       >
         <DialogTitle sx={{ fontSize: 24, fontWeight: 700 }}>
@@ -272,22 +395,6 @@ export const HomeView = () => {
           </Button>
         </DialogActions>
       </Dialog>
-
-      <Snackbar
-        open={errorCode !== null}
-        autoHideDuration={6000}
-        onClose={() => setErrorCode(null)}
-      >
-        <Alert
-          severity="error"
-          variant="filled"
-          onClose={() => setErrorCode(null)}
-        >
-          {errorCode
-            ? t(errorCode, { defaultValue: t('error.unknown') })
-            : null}
-        </Alert>
-      </Snackbar>
     </Box>
   )
 }

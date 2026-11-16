@@ -13,6 +13,7 @@ export function EmptyDeck({ signUp, onClearFilters }: EmptyDeckProps) {
 
   return (
     <Box
+      role="status"
       sx={{
         minHeight: 560,
         display: 'flex',
@@ -44,7 +45,11 @@ export function EmptyDeck({ signUp, onClearFilters }: EmptyDeckProps) {
       </Box>
 
       <Typography component="h2" sx={{ fontSize: 30, fontWeight: 700 }}>
-        {signUp ? t('home.deck.signUpTitle') : t('home.deck.emptyTitle')}
+        {signUp
+          ? t('home.deck.signUpTitle')
+          : onClearFilters
+            ? t('home.deck.noMatches')
+            : t('home.deck.emptyTitle')}
       </Typography>
 
       {signUp ? (

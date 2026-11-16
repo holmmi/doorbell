@@ -1,4 +1,4 @@
-import { cleanUpListingImages } from '../repositories/imageCleanupRepository.js'
+import { cleanUpImages } from '../repositories/imageCleanupRepository.js'
 import { deleteImageObject } from './imageService.js'
 
 export const startImageCleanup = () => {
@@ -7,9 +7,9 @@ export const startImageCleanup = () => {
     if (running) return
     running = true
     try {
-      await cleanUpListingImages(deleteImageObject)
+      await cleanUpImages(deleteImageObject)
     } catch (error) {
-      console.error('Unable to run listing image cleanup', {
+      console.error('Unable to run image cleanup', {
         error: error instanceof Error ? error.message : String(error),
       })
     } finally {

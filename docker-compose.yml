@@ -27,7 +27,7 @@ services:
       FLYWAY_USER: doorbell
       FLYWAY_PASSWORD: doorbell
     volumes:
-      - ./migrations:/flyway/sql:ro
+      - ./migrations/sql:/flyway/sql:ro
 
   s3mock:
     image: adobe/s3mock:5.2.3

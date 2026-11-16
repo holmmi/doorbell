@@ -2,6 +2,57 @@ import { z } from 'zod'
 
 import { rooms } from '../types/listing.js'
 
+const locationFilter = z
+  .string()
+  .trim()
+  .transform((value) => value || undefined)
+  .optional()
+
+const decimalFilter = (maximum: number) =>
+  z
+    .string()
+    .trim()
+    .regex(/^\d+(\.\d{1,2})?$/)
+    .transform(Number)
+    .pipe(z.number().positive().max(maximum))
+    .optional()
+
+const feedFilters = z
+  .object({
+    city: locationFilter,
+    neighborhood: locationFilter,
+    maxPrice: decimalFilter(99999999.99),
+    minPrice: decimalFilter(99999999.99),
+    minSize: decimalFilter(999999.99),
+  })
+  .refine((filters) => !filters.neighborhood || !!filters.city, {
+    path: ['neighborhood'],
+    error: 'error.listing.filter.cityRequired',
+  })
+  .refine(
+    ({ minPrice, maxPrice }) =>
+      minPrice === undefined || maxPrice === undefined || minPrice <= maxPrice,
+    { path: ['minPrice'], error: 'error.listing.filter.invalidPriceRange' }
+  )
+
+export const listingFeedQuerySchema = z
+  .record(z.string(), z.unknown())
+  .superRefine((query, context) => {
+    // Express's simple query parser leaves bracket notation in the key.
+    // Reject structured forms of known filters instead of silently ignoring them.
+    for (const key of Object.keys(query)) {
+      const match = /^(city|neighborhood|maxPrice|minPrice|minSize)\[/.exec(key)
+      if (match) {
+        context.addIssue({
+          code: 'custom',
+          path: [match[1]],
+          message: 'error.listing.filter.singleValueRequired',
+        })
+      }
+    }
+  })
+  .pipe(feedFilters)
+
 export const listingSchema = z.object({
   neighborhood: z.string().min(1),
   city: z.string().min(1),
