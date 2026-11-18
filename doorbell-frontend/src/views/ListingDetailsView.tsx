@@ -10,7 +10,7 @@ import {
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link as RouterLink, useParams } from 'react-router'
-import { ApiError } from '../api/client'
+import { ApiError, getToken } from '../api/client'
 import { getListing } from '../api/listingClient'
 import { ChevronLeftIcon } from '../components/home/icons'
 import { ListingSummary } from '../components/matches/ListingSummary'
@@ -71,7 +71,7 @@ const LoadingState = () => {
 export const ListingDetailsView = () => {
   const { t } = useTranslation()
   const { id = '' } = useParams()
-  const { user, logout } = useAuth()
+  const { user, status: authStatus, logout } = useAuth()
   const [revision, setRevision] = useState(0)
   const [result, setResult] = useState<LoadResult | null>(null)
   const requestKey = `${id}:${user?.id ?? 'anonymous'}:${revision}`
@@ -82,7 +82,11 @@ export const ListingDetailsView = () => {
   }, [id])
 
   useEffect(() => {
+    // Wait until a stored token has been checked, so an expired one is cleared
+    // before the first request and the page loads anonymously straight away.
+    if (authStatus === 'loading') return
     const controller = new AbortController()
+    const sentToken = getToken() !== null
     getListing(id, controller.signal).then(
       (listing) => {
         if (controller.signal.aborted) return
@@ -98,9 +102,13 @@ export const ListingDetailsView = () => {
       (error: unknown) => {
         if (controller.signal.aborted) return
         const status = error instanceof ApiError ? error.status : 0
-        // An expired token fails even for public listings. Signing out clears
-        // it, so the reload or Retry then fetches the listing anonymously.
-        if (status === 401) logout()
+        // A token that expires after startup fails even for public listings.
+        // Sign out and retry once without it; anonymous requests never get 401.
+        if (status === 401 && sentToken) {
+          logout()
+          setRevision((value) => value + 1)
+          return
+        }
         setResult({
           key: requestKey,
           status: status === 400 || status === 404 ? 'notFound' : 'error',
@@ -108,7 +116,7 @@ export const ListingDetailsView = () => {
       }
     )
     return () => controller.abort()
-  }, [id, requestKey, logout])
+  }, [id, requestKey, authStatus, logout])
 
   const current = result?.key === requestKey ? result : null
   const retry = () => setRevision((value) => value + 1)
