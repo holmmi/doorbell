@@ -31,11 +31,6 @@ export const profileChanges = (
   if (firstName !== saved.firstName) changes.firstName = firstName
   if (lastName !== saved.lastName) changes.lastName = lastName
   if (phone !== saved.phone) changes.phone = phone
-  if (removePicture && saved.picturePath !== null) changes.picturePath = null
+  if (removePicture && saved.pictureKey !== null) changes.pictureKey = null
   return changes
 }
-
-// picturePath is a stored reference. Only web addresses can be shown; other
-// references fall back to initials until picture storage exists.
-export const displayablePicture = (picturePath: string | null) =>
-  picturePath && /^(https?:\/\/|\/)/.test(picturePath) ? picturePath : undefined

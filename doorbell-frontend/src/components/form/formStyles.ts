@@ -1,3 +1,4 @@
+import type { SxProps, Theme } from '@mui/material/styles'
 import { brand, shadows } from '../../theme/tokens'
 
 // Doorbell input style from the UI kit. Spread into a page or form container
@@ -19,4 +20,4 @@ export const doorbellInputsSx = {
       borderWidth: 1.5,
     },
   },
-} as const
+} satisfies SxProps<Theme>

@@ -34,5 +34,5 @@ export interface ProfileUpdate {
   firstName?: string
   lastName?: string
   phone?: string | null
-  picturePath?: null
+  pictureKey?: null
 }

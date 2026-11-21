@@ -392,6 +392,8 @@ const resources = {
         network: 'Cannot reach the server. Please try again.',
         authentication: {
           unauthorized: 'Please sign in again.',
+          sessionChanged:
+            'You signed in to a different account. Reload the page to continue.',
         },
         authorization: {
           forbidden: 'You do not have permission to perform this action.',

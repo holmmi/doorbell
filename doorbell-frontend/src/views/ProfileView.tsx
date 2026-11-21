@@ -1,3 +1,4 @@
+import type { SxProps, Theme } from '@mui/material/styles'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Alert, Box, Button, CircularProgress, Typography } from '@mui/material'
 import { useEffect, useState } from 'react'
@@ -29,20 +30,20 @@ const pageSx = {
   flexDirection: 'column',
   gap: 4,
   ...doorbellInputsSx,
-} as const
+} satisfies SxProps<Theme>
 
 const titleSx = {
   fontSize: { xs: 40, md: 52 },
   fontWeight: 800,
   lineHeight: 1.05,
   letterSpacing: '-0.025em',
-} as const
+} satisfies SxProps<Theme>
 
 const subtitleSx = {
   fontSize: '1.1875rem',
   lineHeight: 1.5,
   color: 'text.secondary',
-} as const
+} satisfies SxProps<Theme>
 
 const cardSx = {
   bgcolor: 'background.paper',
@@ -52,7 +53,7 @@ const cardSx = {
   display: 'flex',
   flexDirection: 'column',
   gap: 3.75,
-} as const
+} satisfies SxProps<Theme>
 
 const sectionLabelSx = {
   fontSize: 13,
@@ -60,7 +61,7 @@ const sectionLabelSx = {
   letterSpacing: '0.08em',
   textTransform: 'uppercase',
   color: 'text.secondary',
-} as const
+} satisfies SxProps<Theme>
 
 const fieldGridSx = {
   display: 'grid',
@@ -69,7 +70,7 @@ const fieldGridSx = {
     sm: 'repeat(2, minmax(0, 1fr))',
   },
   gap: 2.25,
-} as const
+} satisfies SxProps<Theme>
 
 const roleTagSx = {
   alignSelf: 'flex-start',
@@ -82,7 +83,7 @@ const roleTagSx = {
   fontWeight: 700,
   letterSpacing: '0.04em',
   textTransform: 'uppercase',
-} as const
+} satisfies SxProps<Theme>
 
 const detailSx = {
   display: 'flex',
@@ -101,7 +102,7 @@ const detailSx = {
     color: 'text.secondary',
     overflowWrap: 'anywhere',
   },
-} as const
+} satisfies SxProps<Theme>
 
 const footerSx = {
   display: 'flex',
@@ -111,14 +112,14 @@ const footerSx = {
   justifyContent: 'space-between',
   pt: 2.5,
   borderTop: `1px solid ${brand.border}`,
-} as const
+} satisfies SxProps<Theme>
 
 // On phones the note takes its own line above the buttons.
 const footerNoteSx = {
   flex: { xs: '1 1 100%', sm: '1 1 0' },
   fontSize: 15,
   color: 'text.secondary',
-} as const
+} satisfies SxProps<Theme>
 
 type Feedback = { severity: 'success' | 'error'; message: string }
 
@@ -197,7 +198,7 @@ const ProfileForm = ({ initialUser }: ProfileFormProps) => {
         }}
       >
         <ProfilePicture
-          picturePath={removePicture ? null : saved.picturePath}
+          pictureUrl={removePicture ? null : saved.pictureUrl}
           firstName={draft.firstName}
           lastName={draft.lastName}
         />
@@ -219,7 +220,7 @@ const ProfileForm = ({ initialUser }: ProfileFormProps) => {
           <Box component="span" sx={roleTagSx}>
             {t(`auth.${saved.role.toLowerCase()}`)}
           </Box>
-          {saved.picturePath ? (
+          {saved.pictureKey ? (
             <Box
               sx={{
                 display: 'flex',

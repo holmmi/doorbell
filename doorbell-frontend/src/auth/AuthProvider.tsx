@@ -68,36 +68,39 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setStatus('anonymous')
   }, [])
 
-  // An expired session signs the user out; ProtectedRoute then shows login.
-  const signOutOnUnauthorized = useCallback(
-    (error: unknown) => {
-      if (error instanceof ApiError && error.status === 401) logout()
-      throw error
+  // Runs an account request for the session that is signed in when it starts.
+  // If the session changes before it finishes (sign out, or sign in as someone
+  // else), the result is dropped: it neither replaces the current user nor signs
+  // them out. A 401 for the current session signs out; ProtectedRoute then
+  // shows the login view.
+  const forCurrentSession = useCallback(
+    async (request: () => Promise<UserInfo>) => {
+      const token = getToken()
+      const sessionChanged = () =>
+        new ApiError(0, 'error.authentication.sessionChanged')
+      try {
+        const result = await request()
+        if (getToken() !== token) throw sessionChanged()
+        setUser(result)
+        return result
+      } catch (error) {
+        if (getToken() !== token) throw sessionChanged()
+        if (error instanceof ApiError && error.status === 401) logout()
+        throw error
+      }
     },
     [logout]
   )
 
-  const refreshUser = useCallback(async () => {
-    try {
-      const currentUser = await userClient.getCurrentUser()
-      setUser(currentUser)
-      return currentUser
-    } catch (error) {
-      return signOutOnUnauthorized(error)
-    }
-  }, [signOutOnUnauthorized])
+  const refreshUser = useCallback(
+    () => forCurrentSession(userClient.getCurrentUser),
+    [forCurrentSession]
+  )
 
   const updateProfile = useCallback(
-    async (update: ProfileUpdate) => {
-      try {
-        const updatedUser = await userClient.updateCurrentUser(update)
-        setUser(updatedUser)
-        return updatedUser
-      } catch (error) {
-        return signOutOnUnauthorized(error)
-      }
-    },
-    [signOutOnUnauthorized]
+    (update: ProfileUpdate) =>
+      forCurrentSession(() => userClient.updateCurrentUser(update)),
+    [forCurrentSession]
   )
 
   const value = useMemo(
