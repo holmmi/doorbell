@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict'
+import { apiRequest } from './helpers/utils.js'
 import { beforeEach, describe, test } from 'node:test'
 import { setTimeout as delay } from 'node:timers/promises'
 import { GetObjectCommand, S3ServiceException } from '@aws-sdk/client-s3'
@@ -173,6 +174,100 @@ void describe(
       })
     })
 
+    void describe('my listings', () => {
+      void test('returns only owned published and unpublished listings with details and ordered images', async () => {
+        await createListing()
+        // A pending upload does not make the draft ready or appear in images.
+        await presign()
+        const draft = await readListing()
+        await pool.query(`
+          INSERT INTO "user" (first_name, last_name, email, password, role)
+          VALUES ('Other', 'Owner', 'other@example.com', 'unused', 'LANDLORD')
+        `)
+        await seedPublishedListing(2, 'listings/other/published.png')
+        const otherDraftId = await seedPublishedListing(
+          2,
+          'listings/other/draft.png'
+        )
+        await pool.query(
+          'UPDATE rental_listing SET published = FALSE WHERE id = $1',
+          [otherDraftId]
+        )
+        const publishedId = await seedPublishedListing(
+          1,
+          'listings/own/first.png'
+        )
+        // Insert out of order to verify image ordering.
+        await pool.query(
+          `INSERT INTO rental_listing_image
+             (rental_listing_id, image_path, display_order)
+           VALUES ($1, 'listings/own/third.png', 3),
+                  ($1, 'listings/own/second.png', 2)`,
+          [publishedId]
+        )
+
+        const response = await request('GET', '/mine?ownerId=2&userId=2')
+        assert.equal(response.status, 200)
+        const listings = (await response.json()) as ListingDetailsResponse[]
+        assert.deepEqual(
+          listings.map(({ id }) => id),
+          [draft.id, publishedId]
+        )
+        assert.deepEqual(listings[0], draft)
+        assert.equal(listings[1].ownerId, '1')
+        assert.equal(listings[1].published, true)
+        assert.equal(listings[1].ready, true)
+        assert.deepEqual(
+          listings[1].images.map(({ displayOrder }) => displayOrder),
+          [1, 2, 3]
+        )
+        for (const image of listings[1].images) {
+          assert.deepEqual(Object.keys(image).sort(), [
+            'displayOrder',
+            'id',
+            'imageUrl',
+          ])
+          assert.equal(
+            new URL(image.imageUrl).searchParams.get('X-Amz-Expires'),
+            '900'
+          )
+        }
+      })
+
+      void test('returns an empty array when the landlord has no listings', async () => {
+        const response = await request('GET', '/mine')
+        assert.equal(response.status, 200)
+        assert.deepEqual(await response.json(), [])
+      })
+
+      void test('returns all owned listings without the feed limit', async () => {
+        for (let index = 0; index < 11; index += 1) {
+          const created = await request('POST', '', listingInput)
+          assert.equal(created.status, 201)
+        }
+        const response = await request('GET', '/mine')
+        assert.equal(response.status, 200)
+        const listings = (await response.json()) as ListingDetailsResponse[]
+        assert.deepEqual(
+          listings.map(({ id }) => id),
+          Array.from({ length: 11 }, (_, index) => String(index + 1))
+        )
+      })
+
+      for (const invalidToken of [undefined, 'invalid-token']) {
+        void test(`rejects ${invalidToken === undefined ? 'missing' : 'invalid'} authentication`, async () => {
+          const response =
+            invalidToken === undefined
+              ? await publicRequest('GET', '/mine')
+              : await requestAs(invalidToken, 'GET', '/mine')
+          assert.equal(response.status, 401)
+          assert.deepEqual(await response.json(), {
+            error: 'error.authentication.unauthorized',
+          })
+        })
+      }
+    })
+
     void describe('listing access', () => {
       let images: ListingDetails['images']
       const createdAt = '2026-10-28'
@@ -203,11 +298,8 @@ void describe(
         ).rows
       })
 
-      const getListing = async (userId?: string) => {
-        if (userId === undefined) return publicRequest('GET', '/1')
-        const { createAccessToken } = await import('../../utils/jwt.js')
-        return requestAs(createAccessToken(userId), 'GET', '/1')
-      }
+      const getListing = (userId?: string) =>
+        apiRequest(userId, 'GET', '/listing/1')
 
       for (const [description, userId] of [
         ['anonymous visitor', undefined],
@@ -794,11 +886,11 @@ void describe(
           new Set(imagePaths.rows.map((row) => row.image_path))
         )
 
-        const { cleanUpListingImages } =
+        const { cleanUpImages } =
           await import('../../repositories/imageCleanupRepository.js')
         const { deleteImageObject } =
           await import('../../services/imageService.js')
-        await cleanUpListingImages(deleteImageObject)
+        await cleanUpImages(deleteImageObject)
         for (const { image_path: imagePath } of imagePaths.rows) {
           await head(imagePath)
         }
@@ -806,7 +898,7 @@ void describe(
         await pool.query(
           "UPDATE listing_image_cleanup SET available_after = CURRENT_TIMESTAMP - INTERVAL '1 second'"
         )
-        await cleanUpListingImages(deleteImageObject)
+        await cleanUpImages(deleteImageObject)
         for (const { image_path: key } of imagePaths.rows) {
           await assert.rejects(
             head(key),

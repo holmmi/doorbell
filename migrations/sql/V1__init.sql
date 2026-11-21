@@ -94,3 +94,4 @@ CREATE TABLE "match" (
         REFERENCES rental_listing(id)
         ON DELETE CASCADE
 );
+--
