@@ -2,7 +2,6 @@ import { Box, Divider, Link, Typography } from '@mui/material'
 import { useTranslation } from 'react-i18next'
 import { Link as RouterLink } from 'react-router'
 
-// TODO: add these pages; the links lead to unmatched routes until then.
 const footerLinks = [
   { key: 'about', to: '/about' },
   { key: 'contact', to: '/contact' },

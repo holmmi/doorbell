@@ -91,6 +91,11 @@ export interface FeedFilters {
   minSize: number
 }
 
+export interface ListingFilterOptions {
+  locations: { city: string; neighborhoods: string[] }[]
+  maxPrices: string[]
+}
+
 export const toHomeListing = (item: ListingFeedItem): HomeListing => ({
   id: item.id,
   createdAt: item.createdAt,

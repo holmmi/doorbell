@@ -6,34 +6,13 @@ import type {
 } from '../../types/listingInteraction.js'
 import {
   pool,
-  baseUrl,
   seedPublishedListing,
   readListing,
   update,
   waitForBlockedConnection,
 } from './helpers/integration.js'
 
-const apiRequest = async (
-  userId: string | undefined,
-  method: string,
-  path: string,
-  body?: unknown,
-  authorization?: string
-) => {
-  const { createAccessToken } = await import('../../utils/jwt.js')
-  return fetch(new URL(`/api${path}`, baseUrl), {
-    method,
-    headers: {
-      ...(userId === undefined
-        ? {}
-        : { Authorization: `Bearer ${createAccessToken(userId)}` }),
-      ...(authorization === undefined ? {} : { Authorization: authorization }),
-      'Content-Type': 'application/json',
-    },
-    ...(body === undefined ? {} : { body: JSON.stringify(body) }),
-    signal: AbortSignal.timeout(15_000),
-  })
-}
+import { apiRequest } from './helpers/utils.js'
 
 const preference = (tenantId = '2', liked = true, listingId = '1') =>
   apiRequest(tenantId, 'POST', `/listing-interaction/${listingId}/preference`, {
@@ -145,7 +124,7 @@ void describe(
     void describe('preferences and matches', () => {
       beforeEach(async () => {
         await pool.query(`
-          INSERT INTO "user" (first_name, last_name, email, password, role, picture_path) VALUES
+          INSERT INTO "user" (first_name, last_name, email, password, role, picture_key) VALUES
             ('Ada', 'Tenant', 'ada@example.com', 'private-tenant-password', 'TENANT', 'profiles/2/avatar.png'),
             ('Ben', 'Tenant', 'ben@example.com', 'private-tenant-password', 'TENANT', NULL),
             ('Cal', 'Tenant', 'cal@example.com', 'private-tenant-password', 'TENANT', NULL),

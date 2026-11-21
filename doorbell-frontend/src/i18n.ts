@@ -37,21 +37,22 @@ const resources = {
         retry: 'Try again',
       },
       home: {
+        retry: 'Retry',
         title: 'Find your next home, one swipe at a time',
         subtitle: 'Like a home and the landlord gets a ring.',
         filters: {
-          city: 'City',
-          neighborhood: 'Neighbourhood',
+          location: 'Location',
           maxPrice: 'Max price',
           size: 'Size',
-          anyCity: 'Any city',
-          allAreas: 'All areas',
+          anyLocation: 'Any location',
+          wholeCity: '{{city}} — all neighbourhoods',
+          neighborhoodInCity: '{{city}} / {{neighborhood}}',
+          loading: 'Loading filter choices…',
+          loadError: 'We could not load location choices.',
           noLimit: 'No limit',
           anySize: 'Any size',
           price: '€{{price}}',
           minSize: '{{size}}+ m²',
-          matchCount_one: '{{count}} home matches your filters',
-          matchCount_other: '{{count}} homes match your filters',
         },
         rooms: {
           STUDIO: 'Studio',
@@ -75,6 +76,11 @@ const resources = {
           showPhoto: 'Show photo {{number}}',
         },
         deck: {
+          loading: 'Loading homes…',
+          loadError: 'We could not load homes. Please retry.',
+          saving: 'Saving your choice…',
+          saveError: 'We could not save your choice. Please try swiping again.',
+          noMatches: 'No homes match your filters',
           like: 'Like',
           dislike: 'Dislike',
           likeStamp: 'YUP!',
@@ -86,7 +92,7 @@ const resources = {
           emptyBody: 'Try a different location or a higher max price.',
           clearFilters: 'Clear filters',
           signUpTitle: 'Sign up to see every home',
-          signUpDialogTitle: 'Create an account to like homes',
+          signUpDialogTitle: 'Create an account to like or skip homes',
         },
         how: {
           title: 'How Doorbell works',
@@ -324,6 +330,18 @@ const resources = {
         },
       },
       error: {
+        user: {
+          picture: {
+            invalidKey:
+              'This profile picture upload has expired or is invalid. Please upload it again.',
+            invalidObject:
+              'This profile picture is empty or does not match its file type.',
+            notUploaded:
+              'This profile picture has not finished uploading. Please try again.',
+            storageUnavailable:
+              'Profile picture storage is unavailable. Please try again later.',
+          },
+        },
         listing: {
           notFound: 'This listing could not be found.',
           unavailable: 'This listing is no longer available.',
@@ -338,6 +356,11 @@ const resources = {
           applicant: {
             notFound: 'This applicant could not be found for the listing.',
             notInterested: 'This tenant is not interested in the listing.',
+          },
+          filter: {
+            cityRequired: 'Choose a city before choosing a neighborhood.',
+            singleValueRequired: 'Provide a single value for each filter.',
+            invalidPriceRange: 'Minimum rent must not exceed maximum rent.',
           },
           images: {
             incomplete:
@@ -389,6 +412,119 @@ const resources = {
         },
         validation: {
           server: 'Some details are invalid. Check the form and try again.',
+        },
+      },
+      privacyPage: {
+        title: 'Privacy Policy',
+        updated: 'Last updated 18 November 2026',
+        intro:
+          'Doorbell is a student project built for the Aalto University course CS-E4400 Design of WWW Services. It is a demo, not a commercial service. This page explains what information Doorbell stores, who can see it and what you can do about it.',
+        sections: [
+          {
+            heading: 'What we store',
+            items: [
+              'Account details: your first and last name, email address, account type (tenant or landlord) and password. Passwords are stored only as a secure hash, never as plain text.',
+              'Profile details you choose to add: a phone number and a profile picture.',
+              'Listings created by landlords: rent, size, room type, city and neighbourhood, availability date, extra costs and photos.',
+              'Your activity: the homes a tenant likes or passes on, the tenants a landlord accepts, and the resulting matches.',
+            ],
+          },
+          {
+            heading: 'How we use it',
+            paragraphs: [
+              'We use this information only to run Doorbell: signing you in, showing homes, letting landlords know who is interested and connecting matched tenants and landlords.',
+              'Doorbell has no advertising and no analytics or tracking tools, and we do not sell or share your information with anyone else.',
+            ],
+          },
+          {
+            heading: 'Who can see your information',
+            items: [
+              'Published listings and their photos are public. Anyone can view them, including visitors who are not signed in.',
+              'When a tenant likes a listing, its landlord sees the tenant’s first and last name.',
+              'When a landlord accepts a tenant, they become a match. Both sides can then see each other’s name, email address and phone number (if added), so they can get in touch.',
+              'Your password is never shown to anyone.',
+            ],
+          },
+          {
+            heading: 'Storage in your browser',
+            paragraphs: [
+              'When you sign in, Doorbell saves a sign-in token in your browser’s local storage. It expires six hours after you sign in and is removed when you log out. Doorbell does not use cookies.',
+            ],
+          },
+          {
+            heading: 'Your choices',
+            paragraphs: [
+              'To ask for a copy of your information, have it corrected or have your account deleted, contact the team through our GitHub page. Please do not post your password or other personal details publicly there.',
+            ],
+          },
+          {
+            heading: 'Changes to this policy',
+            paragraphs: [
+              'If Doorbell starts handling information differently, we will update this page and the date at the top.',
+            ],
+          },
+        ],
+        questions: {
+          heading: 'Questions',
+          body: 'Questions about this policy or your information?',
+          link: 'Contact us',
+        },
+      },
+      aboutPage: {
+        title: 'About Doorbell',
+        intro:
+          'Doorbell helps people in Finland find a rental home, one swipe at a time. Like a home and the landlord gets a ring.',
+        sections: [
+          {
+            heading: 'Why we built it',
+            paragraphs: [
+              'Searching for a rental often means scrolling long lists and sending messages that never get an answer. Doorbell makes it quick to show interest and lets landlords see who is interested in their home.',
+              'Doorbell is a student project built for the Aalto University course CS-E4400 Design of WWW Services. It is a demo, not a commercial service.',
+            ],
+          },
+          {
+            heading: 'For tenants',
+            items: [
+              'Browse homes one card at a time, filtered by location, price and size.',
+              'Like the homes you are interested in and pass on the rest.',
+              'Once a landlord accepts you, the match and the landlord’s contact details appear on your Matches page.',
+            ],
+          },
+          {
+            heading: 'For landlords',
+            items: [
+              'Create a listing with photos, rent, size, location and availability.',
+              'See which tenants have liked your listing on your Likes page.',
+              'Accept the tenants you want to hear from, and their contact details appear on your Likes page.',
+            ],
+          },
+          {
+            heading: 'Good to know',
+            paragraphs: [
+              'A like shows interest and a match lets you get in touch. Neither one is a rental agreement; you agree on the details directly with each other.',
+            ],
+          },
+        ],
+      },
+      contactPage: {
+        title: 'Contact us',
+        intro:
+          'Doorbell is a student project built for the Aalto University course CS-E4400 Design of WWW Services. The team handles questions, feedback and bug reports on GitHub.',
+        sections: [
+          {
+            heading: 'Before you write',
+            paragraphs: [
+              'GitHub issues are public. Do not include your password, phone number or other personal details. To ask about your account or have it deleted, describe the request and the team will reply on the issue.',
+            ],
+          },
+        ],
+        links: {
+          heading: 'Get in touch',
+          issues: 'Open an issue on GitHub',
+          issuesDescription:
+            'for questions, feedback, bug reports and privacy requests.',
+          repository: 'Doorbell on GitHub',
+          repositoryDescription: 'the project’s source code.',
         },
       },
       pageTitles: {
