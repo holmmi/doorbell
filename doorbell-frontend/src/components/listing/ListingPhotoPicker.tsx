@@ -24,14 +24,14 @@ const mosaicSx = {
   gridTemplateRows: '1fr 1fr',
   gap: 1.25,
   height: 210,
-} as const
+} satisfies SxProps<Theme>
 
 const thumbnailGridSx = {
   display: 'grid',
   // Wide enough for the remove and move buttons on each thumbnail.
   gridTemplateColumns: 'repeat(auto-fill, minmax(96px, 1fr))',
   gap: 1.25,
-} as const
+} satisfies SxProps<Theme>
 
 const addTileSx = {
   borderRadius: '12px',
@@ -46,7 +46,7 @@ const addTileSx = {
   fontFamily: 'inherit',
   transition: 'border-color 200ms ease',
   '&:hover': { borderColor: brand.purple },
-} as const
+} satisfies SxProps<Theme>
 
 const photoSx = {
   width: '100%',
@@ -54,7 +54,7 @@ const photoSx = {
   objectFit: 'cover',
   borderRadius: '12px',
   display: 'block',
-} as const
+} satisfies SxProps<Theme>
 
 const tileButtonSx = {
   width: 28,
@@ -63,14 +63,14 @@ const tileButtonSx = {
   color: 'text.primary',
   '&:hover': { bgcolor: 'background.paper' },
   '&.Mui-disabled': { bgcolor: 'rgba(255, 255, 255, 0.6)' },
-} as const
+} satisfies SxProps<Theme>
 
 const removeButtonSx = {
   ...tileButtonSx,
   position: 'absolute',
   top: 8,
   right: 8,
-} as const
+} satisfies SxProps<Theme>
 
 const moveButtonsSx = {
   position: 'absolute',
@@ -78,7 +78,10 @@ const moveButtonsSx = {
   bottom: 8,
   display: 'flex',
   gap: 0.5,
-} as const
+} satisfies SxProps<Theme>
+
+// One style object per tile, so it can be merged into the tile's sx array.
+type TileSx = Exclude<SxProps<Theme>, readonly unknown[]>
 
 type ListingPhotoPickerProps = {
   photos: ListingPhoto[]
@@ -108,12 +111,12 @@ export const ListingPhotoPicker = ({
     if (files.length > 0) onAdd(files)
   }
 
-  const addTile = (sx: SxProps<Theme>) => (
+  const addTile = (sx: TileSx) => (
     <ButtonBase
       onClick={openPicker}
       disabled={disabled}
       aria-label={t('listing.addPhotos')}
-      sx={[addTileSx, sx] as SxProps<Theme>}
+      sx={[addTileSx, sx]}
     >
       <PlusIcon />
       {t('listing.addPhotos')}
@@ -125,19 +128,10 @@ export const ListingPhotoPicker = ({
       ? photo.file.name
       : t('listing.photoNumber', { number: index + 1 })
 
-  const photoTile = (
-    photo: ListingPhoto,
-    index: number,
-    sx: SxProps<Theme>
-  ) => (
+  const photoTile = (photo: ListingPhoto, index: number, sx: TileSx) => (
     <Box
       key={photo.key}
-      sx={
-        [
-          { position: 'relative', minHeight: 0, minWidth: 0 },
-          sx,
-        ] as SxProps<Theme>
-      }
+      sx={[{ position: 'relative', minHeight: 0, minWidth: 0 }, sx]}
     >
       <Box
         component="img"

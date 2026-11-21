@@ -1,3 +1,4 @@
+import type { SxProps, Theme } from '@mui/material/styles'
 import { brand, shadows } from '../../theme/tokens'
 
 // Styles shared by the create and edit listing views.
@@ -29,7 +30,7 @@ export const pageSx = {
       borderWidth: 1.5,
     },
   },
-} as const
+} satisfies SxProps<Theme>
 
 export const backLinkSx = {
   alignSelf: 'flex-start',
@@ -39,27 +40,27 @@ export const backLinkSx = {
   fontSize: 17,
   fontWeight: 600,
   '&:hover': { bgcolor: 'transparent' },
-} as const
+} satisfies SxProps<Theme>
 
 export const titleSx = {
   fontSize: { xs: 40, md: 52 },
   fontWeight: 800,
   lineHeight: 1.05,
   letterSpacing: '-0.025em',
-} as const
+} satisfies SxProps<Theme>
 
 export const subtitleSx = {
   fontSize: '1.1875rem',
   lineHeight: 1.5,
   color: 'text.secondary',
-} as const
+} satisfies SxProps<Theme>
 
 export const columnsSx = {
   display: 'grid',
   gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 400px), 1fr))',
   gap: 5,
   alignItems: 'start',
-} as const
+} satisfies SxProps<Theme>
 
 export const formCardSx = {
   bgcolor: 'background.paper',
@@ -69,7 +70,7 @@ export const formCardSx = {
   display: 'flex',
   flexDirection: 'column',
   gap: 3.25,
-} as const
+} satisfies SxProps<Theme>
 
 export const asideSx = {
   position: { md: 'sticky' },
@@ -77,7 +78,7 @@ export const asideSx = {
   display: 'flex',
   flexDirection: 'column',
   gap: 1.75,
-} as const
+} satisfies SxProps<Theme>
 
 export const fieldGridSx = {
   display: 'grid',
@@ -86,38 +87,40 @@ export const fieldGridSx = {
     sm: 'repeat(2, minmax(0, 1fr))',
   },
   gap: 2.25,
-} as const
+} satisfies SxProps<Theme>
 
-export const roomChipSx = (selected: boolean) => ({
-  height: 44,
-  px: 1,
-  borderRadius: 999,
-  fontSize: 15,
-  fontWeight: 600,
-  border: `1.5px solid ${selected ? brand.purple : brand.borderInput}`,
-  bgcolor: selected ? brand.purple50 : 'background.paper',
-  color: selected ? brand.purple : 'text.primary',
-  '&:hover': { bgcolor: brand.purple50 },
-})
+export const roomChipSx = (selected: boolean) =>
+  ({
+    height: 44,
+    px: 1,
+    borderRadius: 999,
+    fontSize: 15,
+    fontWeight: 600,
+    border: `1.5px solid ${selected ? brand.purple : brand.borderInput}`,
+    bgcolor: selected ? brand.purple50 : 'background.paper',
+    color: selected ? brand.purple : 'text.primary',
+    '&:hover': { bgcolor: brand.purple50 },
+  }) satisfies SxProps<Theme>
 
 // The theme's contained button is a gradient; the UI kit uses solid purple.
 export const solidButtonSx = {
   background: 'none',
   bgcolor: brand.purple,
   '&:hover': { background: 'none', bgcolor: brand.purpleHover },
-} as const
+} satisfies SxProps<Theme>
 
-export const submitButtonSx = (done: boolean) => ({
-  ...solidButtonSx,
-  minHeight: 58,
-  fontSize: 18,
-  bgcolor: done ? brand.success : brand.purple,
-  boxShadow: done ? 'none' : shadows.cta,
-  '&.Mui-disabled': {
-    color: 'common.white',
-    bgcolor: done ? brand.success : brand.purple200,
-  },
-})
+export const submitButtonSx = (done: boolean) =>
+  ({
+    ...solidButtonSx,
+    minHeight: 58,
+    fontSize: 18,
+    bgcolor: done ? brand.success : brand.purple,
+    boxShadow: done ? 'none' : shadows.cta,
+    '&.Mui-disabled': {
+      color: 'common.white',
+      bgcolor: done ? brand.success : brand.purple200,
+    },
+  }) satisfies SxProps<Theme>
 
 export const previewLabelSx = {
   fontSize: '0.8125rem',
@@ -126,7 +129,7 @@ export const previewLabelSx = {
   lineHeight: 1.4,
   textTransform: 'uppercase',
   color: 'text.secondary',
-} as const
+} satisfies SxProps<Theme>
 
 // Announces progress to screen readers without showing it twice.
 export const visuallyHiddenSx = {
@@ -135,7 +138,7 @@ export const visuallyHiddenSx = {
   height: 1,
   overflow: 'hidden',
   clip: 'rect(0 0 0 0)',
-} as const
+} satisfies SxProps<Theme>
 
 export const noticeSx = {
   bgcolor: brand.purple50,
@@ -143,26 +146,27 @@ export const noticeSx = {
   borderRadius: '16px',
   color: 'text.primary',
   p: 2.5,
-} as const
+} satisfies SxProps<Theme>
 
-export const statusSx = (published: boolean) => ({
-  alignSelf: 'flex-start',
-  display: 'inline-flex',
-  alignItems: 'center',
-  gap: 1,
-  px: 1.5,
-  py: 0.75,
-  borderRadius: 999,
-  fontSize: 14,
-  fontWeight: 700,
-  bgcolor: published ? brand.purple50 : 'background.paper',
-  color: published ? brand.purple : 'text.secondary',
-  border: `1.5px solid ${published ? brand.purple200 : brand.borderInput}`,
-  '&::before': {
-    content: '""',
-    width: 8,
-    height: 8,
-    borderRadius: '50%',
-    bgcolor: published ? brand.success : brand.borderInput,
-  },
-})
+export const statusSx = (published: boolean) =>
+  ({
+    alignSelf: 'flex-start',
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: 1,
+    px: 1.5,
+    py: 0.75,
+    borderRadius: 999,
+    fontSize: 14,
+    fontWeight: 700,
+    bgcolor: published ? brand.purple50 : 'background.paper',
+    color: published ? brand.purple : 'text.secondary',
+    border: `1.5px solid ${published ? brand.purple200 : brand.borderInput}`,
+    '&::before': {
+      content: '""',
+      width: 8,
+      height: 8,
+      borderRadius: '50%',
+      bgcolor: published ? brand.success : brand.borderInput,
+    },
+  }) satisfies SxProps<Theme>

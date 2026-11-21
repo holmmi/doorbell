@@ -1,3 +1,4 @@
+import type { SxProps, Theme } from '@mui/material/styles'
 import { Box, Divider, Typography } from '@mui/material'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -11,13 +12,13 @@ const cardSx = {
   borderRadius: '24px',
   overflow: 'hidden',
   boxShadow: shadows.card,
-} as const
+} satisfies SxProps<Theme>
 
 const photoFrameSx = {
   position: 'relative',
   aspectRatio: '16 / 10',
   bgcolor: brand.purple100,
-} as const
+} satisfies SxProps<Theme>
 
 const photoSx = {
   position: 'absolute',
@@ -26,7 +27,7 @@ const photoSx = {
   height: '100%',
   objectFit: 'cover',
   display: 'block',
-} as const
+} satisfies SxProps<Theme>
 
 const newTagSx = {
   position: 'absolute',
@@ -43,7 +44,7 @@ const newTagSx = {
   letterSpacing: '0.04em',
   lineHeight: 1.2,
   textTransform: 'uppercase',
-} as const
+} satisfies SxProps<Theme>
 
 const priceRowSx = {
   display: 'flex',
@@ -51,7 +52,7 @@ const priceRowSx = {
   justifyContent: 'space-between',
   gap: 1.5,
   flexWrap: 'wrap',
-} as const
+} satisfies SxProps<Theme>
 
 export const ListingPreviewCard = ({
   listing,
