@@ -3,7 +3,9 @@ import { Router } from 'express'
 import {
   createRentalListing,
   getRentalListingFeed,
+  getRentalListingFilterOptions,
   getRentalListing,
+  getMyRentalListings,
   presignListingImage,
   publishRentalListing,
   uploadListingImage,
@@ -26,6 +28,12 @@ const listingRouter = Router()
 const landlordOnly = [authenticate, requireRole('LANDLORD')]
 
 listingRouter.get('/', optionalAuthenticate, getRentalListingFeed)
+listingRouter.get(
+  '/filter-options',
+  optionalAuthenticate,
+  getRentalListingFilterOptions
+)
+listingRouter.get('/mine', landlordOnly, getMyRentalListings)
 listingRouter.post(
   '/',
   landlordOnly,

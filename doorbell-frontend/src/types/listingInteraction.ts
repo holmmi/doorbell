@@ -24,6 +24,12 @@ export interface PendingApplicant {
   }
 }
 
+export interface ListingPreferenceResponse {
+  listingId: string
+  tenantId: string
+  liked: boolean
+}
+
 export interface ApplicantDecisionResponse {
   listingId: string
   tenantId: string

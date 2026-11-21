@@ -1,16 +1,17 @@
-import { Box, MenuItem, Select, Typography } from '@mui/material'
+import { Box, ListSubheader, MenuItem, Select, Typography } from '@mui/material'
 import type { ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
-import type { FeedFilters } from '../../types/listing'
-import { formatNumber } from '../../utils/format'
+import type { FeedFilters, ListingFilterOptions } from '../../types/listing'
 
-const cities = ['Helsinki', 'Espoo', 'Tampere', 'Turku']
-const maxPrices = [1000, 1250, 1500, 2000, 3000, 5000]
 const minSizes = [30, 40, 50]
+// Fixed budget steps keep the dropdown useful regardless of distinct rents.
+const maxPrices = [500, 1000, 1500, 2000, 2500, 3000]
+const locationValue = (city: string, neighborhood = '') =>
+  city ? JSON.stringify([city, neighborhood]) : ''
 
 interface FilterBarProps {
   filters: FeedFilters
-  neighborhoods: string[]
+  options: ListingFilterOptions | null
   onChange: (filters: FeedFilters) => void
 }
 
@@ -20,15 +21,17 @@ interface FilterFieldProps {
   value: string
   onChange: (value: string) => void
   children: ReactNode
+  disabled?: boolean
 }
 
-function FilterField({
+const FilterField = ({
   id,
   label,
   value,
   onChange,
   children,
-}: FilterFieldProps) {
+  disabled,
+}: FilterFieldProps) => {
   const labelId = `${id}-label`
 
   return (
@@ -58,6 +61,7 @@ function FilterField({
         labelId={labelId}
         value={value}
         displayEmpty
+        disabled={disabled}
         onChange={(event) => onChange(event.target.value)}
         sx={{
           height: 56,
@@ -74,12 +78,14 @@ function FilterField({
   )
 }
 
-export function FilterBar({
-  filters,
-  neighborhoods,
-  onChange,
-}: FilterBarProps) {
+export const FilterBar = ({ filters, options, onChange }: FilterBarProps) => {
   const { t, i18n } = useTranslation()
+  const locations = (options?.locations ?? []).flatMap(
+    ({ city, neighborhoods }) => [
+      { city, neighborhood: '' },
+      ...neighborhoods.map((neighborhood) => ({ city, neighborhood })),
+    ]
+  )
 
   return (
     <Box
@@ -89,7 +95,10 @@ export function FilterBar({
         textAlign: 'left',
         maxWidth: '100%',
         display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))',
+        gridTemplateColumns: {
+          xs: 'minmax(0, 1fr)',
+          md: 'minmax(0, 1.5fr) repeat(2, minmax(0, 1fr))',
+        },
         gap: 2.5,
         p: '20px 24px 24px',
         bgcolor: 'homeSurface',
@@ -99,31 +108,37 @@ export function FilterBar({
       }}
     >
       <FilterField
-        id="home-filter-city"
-        label={t('home.filters.city')}
-        value={filters.city}
-        onChange={(city) => onChange({ ...filters, city, neighborhood: '' })}
+        id="home-filter-location"
+        label={t('home.filters.location')}
+        value={locationValue(filters.city, filters.neighborhood)}
+        disabled={options === null}
+        onChange={(value) => {
+          const location = locations.find(
+            ({ city, neighborhood }) =>
+              locationValue(city, neighborhood) === value
+          )
+          onChange({
+            ...filters,
+            city: location?.city ?? '',
+            neighborhood: location?.neighborhood ?? '',
+          })
+        }}
       >
-        <MenuItem value="">{t('home.filters.anyCity')}</MenuItem>
-        {cities.map((city) => (
-          <MenuItem key={city} value={city}>
-            {city}
-          </MenuItem>
-        ))}
-      </FilterField>
-
-      <FilterField
-        id="home-filter-neighborhood"
-        label={t('home.filters.neighborhood')}
-        value={filters.neighborhood}
-        onChange={(neighborhood) => onChange({ ...filters, neighborhood })}
-      >
-        <MenuItem value="">{t('home.filters.allAreas')}</MenuItem>
-        {neighborhoods.map((neighborhood) => (
-          <MenuItem key={neighborhood} value={neighborhood}>
-            {neighborhood}
-          </MenuItem>
-        ))}
+        <MenuItem value="">{t('home.filters.anyLocation')}</MenuItem>
+        {(options?.locations ?? []).flatMap(({ city, neighborhoods }) => [
+          <ListSubheader key={`heading:${city}`}>{city}</ListSubheader>,
+          <MenuItem key={locationValue(city)} value={locationValue(city)}>
+            {t('home.filters.wholeCity', { city })}
+          </MenuItem>,
+          ...neighborhoods.map((neighborhood) => (
+            <MenuItem
+              key={locationValue(city, neighborhood)}
+              value={locationValue(city, neighborhood)}
+            >
+              {t('home.filters.neighborhoodInCity', { city, neighborhood })}
+            </MenuItem>
+          )),
+        ])}
       </FilterField>
 
       <FilterField
@@ -134,14 +149,16 @@ export function FilterBar({
           onChange({ ...filters, maxPrice: Number(maxPrice) })
         }
       >
+        <MenuItem value="">{t('home.filters.noLimit')}</MenuItem>
         {maxPrices.map((price) => (
           <MenuItem key={price} value={String(price)}>
-            {t('home.filters.price', {
-              price: formatNumber(price, i18n.language),
-            })}
+            {new Intl.NumberFormat(i18n.language, {
+              style: 'currency',
+              currency: 'EUR',
+              maximumFractionDigits: 0,
+            }).format(price)}
           </MenuItem>
         ))}
-        <MenuItem value="">{t('home.filters.noLimit')}</MenuItem>
       </FilterField>
 
       <FilterField

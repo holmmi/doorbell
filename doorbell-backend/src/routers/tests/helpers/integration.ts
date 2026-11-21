@@ -76,6 +76,7 @@ before(
       DB_NAME: postgres.getDatabase(),
       DB_USER: postgres.getUsername(),
       DB_PASSWORD: postgres.getPassword(),
+      DB_SSL: 'false',
       S3_ENDPOINT: s3mock.getHttpConnectionUrl(),
       S3_REGION: 'us-east-1',
       S3_ACCESS_KEY: s3mock.getAccessKeyId(),
@@ -84,7 +85,10 @@ before(
       S3_FORCE_PATH_STYLE: 'true',
     })
     ;({ pool } = await import('../../../config/database.js'))
-    const migrations = new URL('../../../../../migrations/', import.meta.url)
+    const migrations = new URL(
+      '../../../../../migrations/sql/',
+      import.meta.url
+    )
     const filenames = (await readdir(migrations))
       .filter((name) => /^V\d+__.*\.sql$/.test(name))
       .sort((a, b) => a.localeCompare(b, 'en', { numeric: true }))

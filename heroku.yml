@@ -1,0 +1,8 @@
+build:
+  docker:
+    web: Dockerfile.heroku
+    release: migrations/Dockerfile.heroku
+release:
+  image: release
+run:
+  web: /usr/local/bin/start-heroku.sh

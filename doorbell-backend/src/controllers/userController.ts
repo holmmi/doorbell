@@ -7,7 +7,16 @@ import {
   findUserInfoById,
   userExistsByEmail,
 } from '../repositories/userRepository.js'
-import type { LoginInput, RegistrationInput } from '../types/user.js'
+import {
+  presignUserPicture,
+  toUserInfoResponse,
+  updateUserProfile,
+} from '../services/userService.js'
+import type {
+  LoginInput,
+  RegistrationInput,
+  UpdateUserInfoInput,
+} from '../types/user.js'
 import { createAccessToken } from '../utils/jwt.js'
 
 export const getUserInfo: RequestHandler = async (request, response) => {
@@ -25,15 +34,33 @@ export const getUserInfo: RequestHandler = async (request, response) => {
     return
   }
 
-  response.json({
-    id: user.id,
-    role: user.role,
-    firstName: user.firstName,
-    lastName: user.lastName,
-    email: user.email,
-    phone: user.phone,
-    picturePath: user.picturePath,
-  })
+  response.json(await toUserInfoResponse(user))
+}
+
+export const updateUserInfo: RequestHandler = async (request, response) => {
+  const userId = request.auth?.userId
+
+  if (!userId) {
+    response.status(401).json({ error: 'error.authentication.unauthorized' })
+    return
+  }
+
+  const user = await updateUserProfile(
+    userId,
+    request.body as UpdateUserInfoInput
+  )
+
+  response.json(user)
+}
+
+export const presignPicture: RequestHandler = async (request, response) => {
+  const userId = request.auth?.userId
+  if (!userId) {
+    response.status(401).json({ error: 'error.authentication.unauthorized' })
+    return
+  }
+  const { contentType } = request.body as { contentType: string }
+  response.json(await presignUserPicture(userId, contentType))
 }
 
 export const loginUser: RequestHandler = async (request, response) => {

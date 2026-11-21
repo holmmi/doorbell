@@ -34,6 +34,9 @@ const EditListingView = lazyView(
   () => import('./views/EditListingView'),
   'EditListingView'
 )
+const PrivacyView = lazyView(() => import('./views/PrivacyView'), 'PrivacyView')
+const AboutView = lazyView(() => import('./views/AboutView'), 'AboutView')
+const ContactView = lazyView(() => import('./views/ContactView'), 'ContactView')
 
 const page = (View: ComponentType) => (
   <Suspense fallback={<PageLoader />}>
@@ -55,6 +58,9 @@ const App = () => {
               </Route>
               <Route element={<AppShell />}>
                 <Route path="/" element={page(HomeView)} />
+                <Route path="/privacy" element={page(PrivacyView)} />
+                <Route path="/about" element={page(AboutView)} />
+                <Route path="/contact" element={page(ContactView)} />
                 <Route element={<ProtectedRoute />}>
                   <Route path="/profile" element={page(ProfileView)} />
                 </Route>
@@ -66,15 +72,12 @@ const App = () => {
                     path="/listing/new"
                     element={page(CreateListingView)}
                   />
+                  <Route path="/likes" element={page(LikesView)} />
+                  <Route
+                    path="/listing/:listingId/edit"
+                    element={page(EditListingView)}
+                  />
                 </Route>
-              </Route>
-              <Route element={<ProtectedRoute role="LANDLORD" />}>
-                <Route path="/listing/new" element={page(CreateListingView)} />
-                <Route path="/likes" element={page(LikesView)} />
-                <Route
-                  path="/listing/:listingId/edit"
-                  element={page(EditListingView)}
-                />
               </Route>
             </Routes>
           </InteractionsProvider>
