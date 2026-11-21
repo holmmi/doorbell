@@ -23,6 +23,20 @@ export interface ListingInput {
   extraCosts?: string
 }
 
+// What the listing preview card shows while a listing is being edited.
+export type ListingPreview = {
+  neighborhood: string
+  city: string
+  availableFrom: string
+  rent: number
+  squareMeters: number
+  rooms: Room
+  extraCosts: string
+  imageUrl?: string
+  // Missing for a listing that is not saved yet, which counts as new today.
+  createdAt?: string
+}
+
 export interface CreatedListing {
   id: string
 }
@@ -33,10 +47,11 @@ export interface PresignedImageUpload {
   expiresIn: number
 }
 
-export interface ListingImageInput {
-  objectKey: string
-  displayOrder: number
-}
+// An image in a PUT /listing/:id request: an existing image by id, or a new
+// upload by object key. The list's order and the display orders must match.
+export type ListingImageInput =
+  | { id: string; displayOrder: number }
+  | { objectKey: string; displayOrder: number }
 
 /** A listing as returned by `GET /api/listing`. */
 export interface ListingFeedItem {

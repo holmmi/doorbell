@@ -4,10 +4,15 @@ import { useRef, type ChangeEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   allowedPhotoTypes,
-  type PendingPhoto,
-} from '../../hooks/usePublishListing'
+  type ListingPhoto,
+} from '../../hooks/useListingPhotos'
 import { brand } from '../../theme/tokens'
-import { CloseIcon, PlusIcon } from '../icons'
+import {
+  ChevronLeftIcon,
+  ChevronRightIcon,
+  CloseIcon,
+  PlusIcon,
+} from '../icons'
 
 // The first photos form a mosaic (one large, the rest small); any further
 // photos are shown as thumbnails below it.
@@ -19,13 +24,14 @@ const mosaicSx = {
   gridTemplateRows: '1fr 1fr',
   gap: 1.25,
   height: 210,
-} as const
+} satisfies SxProps<Theme>
 
 const thumbnailGridSx = {
   display: 'grid',
-  gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
+  // Wide enough for the remove and move buttons on each thumbnail.
+  gridTemplateColumns: 'repeat(auto-fill, minmax(96px, 1fr))',
   gap: 1.25,
-} as const
+} satisfies SxProps<Theme>
 
 const addTileSx = {
   borderRadius: '12px',
@@ -40,7 +46,7 @@ const addTileSx = {
   fontFamily: 'inherit',
   transition: 'border-color 200ms ease',
   '&:hover': { borderColor: brand.purple },
-} as const
+} satisfies SxProps<Theme>
 
 const photoSx = {
   width: '100%',
@@ -48,25 +54,42 @@ const photoSx = {
   objectFit: 'cover',
   borderRadius: '12px',
   display: 'block',
-} as const
+} satisfies SxProps<Theme>
 
-const removeButtonSx = {
-  position: 'absolute',
-  top: 8,
-  right: 8,
+const tileButtonSx = {
   width: 28,
   height: 28,
   bgcolor: 'rgba(255, 255, 255, 0.92)',
   color: 'text.primary',
   '&:hover': { bgcolor: 'background.paper' },
-} as const
+  '&.Mui-disabled': { bgcolor: 'rgba(255, 255, 255, 0.6)' },
+} satisfies SxProps<Theme>
+
+const removeButtonSx = {
+  ...tileButtonSx,
+  position: 'absolute',
+  top: 8,
+  right: 8,
+} satisfies SxProps<Theme>
+
+const moveButtonsSx = {
+  position: 'absolute',
+  left: 8,
+  bottom: 8,
+  display: 'flex',
+  gap: 0.5,
+} satisfies SxProps<Theme>
+
+// One style object per tile, so it can be merged into the tile's sx array.
+type TileSx = Exclude<SxProps<Theme>, readonly unknown[]>
 
 type ListingPhotoPickerProps = {
-  photos: PendingPhoto[]
+  photos: ListingPhoto[]
   disabled: boolean
   error: string | null
   onAdd: (files: File[]) => void
   onRemove: (key: string) => void
+  onMove: (key: string, offset: -1 | 1) => void
 }
 
 export const ListingPhotoPicker = ({
@@ -75,6 +98,7 @@ export const ListingPhotoPicker = ({
   error,
   onAdd,
   onRemove,
+  onMove,
 }: ListingPhotoPickerProps) => {
   const { t } = useTranslation()
   const inputRef = useRef<HTMLInputElement>(null)
@@ -87,43 +111,73 @@ export const ListingPhotoPicker = ({
     if (files.length > 0) onAdd(files)
   }
 
-  const addTile = (sx: SxProps<Theme>) => (
+  const addTile = (sx: TileSx) => (
     <ButtonBase
       onClick={openPicker}
       disabled={disabled}
       aria-label={t('listing.addPhotos')}
-      sx={[addTileSx, sx] as SxProps<Theme>}
+      sx={[addTileSx, sx]}
     >
       <PlusIcon />
       {t('listing.addPhotos')}
     </ButtonBase>
   )
 
-  const photoTile = (photo: PendingPhoto, sx: SxProps<Theme>) => (
+  const photoName = (photo: ListingPhoto, index: number) =>
+    photo.kind === 'new'
+      ? photo.file.name
+      : t('listing.photoNumber', { number: index + 1 })
+
+  const photoTile = (photo: ListingPhoto, index: number, sx: TileSx) => (
     <Box
       key={photo.key}
-      sx={
-        [
-          { position: 'relative', minHeight: 0, minWidth: 0 },
-          sx,
-        ] as SxProps<Theme>
-      }
+      sx={[{ position: 'relative', minHeight: 0, minWidth: 0 }, sx]}
     >
       <Box
         component="img"
         src={photo.previewUrl}
-        alt={photo.file.name}
+        alt={photoName(photo, index)}
         sx={photoSx}
       />
       {disabled ? null : (
-        <IconButton
-          size="small"
-          aria-label={t('listing.removePhoto', { name: photo.file.name })}
-          onClick={() => onRemove(photo.key)}
-          sx={removeButtonSx}
-        >
-          <CloseIcon sx={{ fontSize: 16 }} style={{ strokeWidth: 2.5 }} />
-        </IconButton>
+        <>
+          <IconButton
+            size="small"
+            aria-label={t('listing.removePhoto', {
+              name: photoName(photo, index),
+            })}
+            onClick={() => onRemove(photo.key)}
+            sx={removeButtonSx}
+          >
+            <CloseIcon sx={{ fontSize: 16 }} style={{ strokeWidth: 2.5 }} />
+          </IconButton>
+          {photos.length > 1 ? (
+            <Box sx={moveButtonsSx}>
+              <IconButton
+                size="small"
+                aria-label={t('listing.movePhotoEarlier', {
+                  name: photoName(photo, index),
+                })}
+                disabled={index === 0}
+                onClick={() => onMove(photo.key, -1)}
+                sx={tileButtonSx}
+              >
+                <ChevronLeftIcon sx={{ fontSize: 18 }} />
+              </IconButton>
+              <IconButton
+                size="small"
+                aria-label={t('listing.movePhotoLater', {
+                  name: photoName(photo, index),
+                })}
+                disabled={index === photos.length - 1}
+                onClick={() => onMove(photo.key, 1)}
+                sx={tileButtonSx}
+              >
+                <ChevronRightIcon sx={{ fontSize: 18 }} />
+              </IconButton>
+            </Box>
+          ) : null}
+        </>
       )}
     </Box>
   )
@@ -161,7 +215,7 @@ export const ListingPhotoPicker = ({
         {photos
           .slice(0, mosaicSize)
           .map((photo, index) =>
-            photoTile(photo, index === 0 ? { gridRow: 'span 2' } : {})
+            photoTile(photo, index, index === 0 ? { gridRow: 'span 2' } : {})
           )}
         {photos.length === 0
           ? addTile({ gridColumn: '1 / -1', gridRow: '1 / -1' })
@@ -173,7 +227,9 @@ export const ListingPhotoPicker = ({
         <Box sx={thumbnailGridSx}>
           {photos
             .slice(mosaicSize)
-            .map((photo) => photoTile(photo, { aspectRatio: '1 / 1' }))}
+            .map((photo, index) =>
+              photoTile(photo, mosaicSize + index, { aspectRatio: '1 / 1' })
+            )}
         </Box>
       ) : null}
       <Box
