@@ -43,3 +43,19 @@ export const CloseIcon = (props: SvgIconProps) => {
     </StrokeIcon>
   )
 }
+
+export const ChevronLeftIcon = (props: SvgIconProps) => {
+  return (
+    <StrokeIcon {...props}>
+      <path d="m15 18-6-6 6-6" />
+    </StrokeIcon>
+  )
+}
+
+export const ChevronRightIcon = (props: SvgIconProps) => {
+  return (
+    <StrokeIcon {...props}>
+      <path d="m9 18 6-6-6-6" />
+    </StrokeIcon>
+  )
+}
