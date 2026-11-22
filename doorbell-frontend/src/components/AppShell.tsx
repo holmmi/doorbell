@@ -1,6 +1,14 @@
-import { AppBar, Box, Container, Toolbar, Typography } from '@mui/material'
+import {
+  AppBar,
+  Box,
+  ButtonBase,
+  Container,
+  Toolbar,
+  Typography,
+} from '@mui/material'
 import { useTheme } from '@mui/material/styles'
-import { NavLink, Outlet } from 'react-router'
+import { startTransition } from 'react'
+import { NavLink, Outlet, useNavigate } from 'react-router'
 import { useTranslation } from 'react-i18next'
 import { useAuth } from '../hooks/useAuth'
 import { useMatches } from '../hooks/useMatches'
@@ -11,6 +19,7 @@ import { Footer } from './Footer'
 import { LoginNavLink } from './LoginNavLink'
 import { Badge } from './Badge'
 import { ProfileAvatar } from './ProfileAvatar'
+import { LogOutIcon } from './icons'
 
 // `role` limits an item to one account type; signed-out users only see Home.
 const navItems = [
@@ -23,10 +32,19 @@ const navItems = [
 export const AppShell = () => {
   const { t } = useTranslation()
   const theme = useTheme()
-  const { user, status } = useAuth()
+  const navigate = useNavigate()
+  const { user, status, logout } = useAuth()
   const { matches, forbidden } = useMatches()
   const { pendingCount, error: likesError } = useLikes()
   const isLoggedIn = status === 'authenticated'
+
+  const handleLogout = () => {
+    // Keep the auth and router updates together to avoid a redirect to login.
+    startTransition(() => {
+      logout()
+      void navigate('/', { replace: true })
+    })
+  }
 
   return (
     <Box
@@ -68,7 +86,9 @@ export const AppShell = () => {
               display: 'flex',
               alignItems: 'center',
               justifyContent: { xs: 'center', md: 'flex-start' },
-              gap: { xs: 2, md: 3 },
+              flexWrap: { xs: 'wrap', md: 'nowrap' },
+              columnGap: { xs: 2, md: 3 },
+              rowGap: 1,
               flexBasis: { xs: '100%', md: 'auto' },
               order: { xs: 3, md: 0 },
               ml: { xs: 0, md: 'auto' },
@@ -132,10 +152,36 @@ export const AppShell = () => {
                 sx={{
                   display: 'inline-flex',
                   alignItems: 'center',
-                  ml: { xs: -1, md: -2 },
+                  gap: { xs: 1, md: 2 },
+                  ml: { md: -2 },
                 }}
               >
                 <ProfileAvatar alt={t('profile.avatarAlt')} />
+                <ButtonBase
+                  type="button"
+                  onClick={handleLogout}
+                  sx={{
+                    color: 'text.secondary',
+                    gap: 1,
+                    minHeight: 44,
+                    borderRadius: 0.5,
+                    fontFamily: 'inherit',
+                    fontSize: { xs: '0.95rem', md: '1.2rem' },
+                    fontWeight: 700,
+                    letterSpacing: '-0.02em',
+                    whiteSpace: 'nowrap',
+                    transition: 'color 0.2s ease',
+                    '&:hover': { color: 'primary.main' },
+                    '&:focus-visible': {
+                      outline: '2px solid',
+                      outlineColor: 'primary.main',
+                      outlineOffset: 2,
+                    },
+                  }}
+                >
+                  <LogOutIcon sx={{ fontSize: { xs: 20, md: 24 } }} />
+                  {t('auth.logOut')}
+                </ButtonBase>
               </Box>
             ) : null}
           </Box>

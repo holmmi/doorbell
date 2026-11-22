@@ -326,6 +326,7 @@ const resources = {
       auth: {
         signUp: 'Sign up',
         logIn: 'Log in',
+        logOut: 'Log out',
         switchForm: 'Authentication form',
         loginTitle: 'Welcome back',
         loginDescription: 'Sign in to continue to Doorbell.',
