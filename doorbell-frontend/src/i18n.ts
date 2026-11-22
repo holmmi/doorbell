@@ -16,6 +16,25 @@ const resources = {
       },
       profile: {
         avatarAlt: 'Profile picture',
+        title: 'Your profile',
+        subtitle:
+          'Keep your name and phone number up to date. Your email and account type can’t be changed here.',
+        about: 'About you',
+        contact: 'Contact',
+        phone: 'Phone',
+        phonePlaceholder: 'Optional',
+        pictureOf: 'Profile picture of {{name}}',
+        noPicture: 'No profile picture. Showing the initials of {{name}}.',
+        removePicture: 'Remove picture',
+        keepPicture: 'Keep picture',
+        pictureWillBeRemoved: 'The picture will be removed when you save.',
+        note: 'When you match, the other person sees your name and contact details.',
+        cancel: 'Cancel',
+        save: 'Save changes',
+        saving: 'Saving…',
+        saved: 'Your profile was saved.',
+        loadFailed: 'Your profile could not be loaded.',
+        retry: 'Try again',
       },
       home: {
         retry: 'Retry',
@@ -255,6 +274,9 @@ const resources = {
         addPhotos: 'Add photos',
         addMore: '+ Add more',
         removePhoto: 'Remove {{name}}',
+        movePhotoEarlier: 'Move {{name}} earlier',
+        movePhotoLater: 'Move {{name}} later',
+        photoNumber: 'Photo {{number}}',
         publish: 'Publish listing',
         published: 'Listing published ✓',
         preview: 'Preview: what renters see',
@@ -273,6 +295,26 @@ const resources = {
           uploading: 'Uploading photos…',
           saving: 'Saving listing…',
           publishing: 'Publishing listing…',
+        },
+        edit: {
+          cta: 'Edit listing',
+          title: 'Edit your listing',
+          subtitle:
+            'Change the details or photos. Renters see your changes as soon as you save.',
+          save: 'Save changes',
+          saveAndUnpublish: 'Save and unpublish',
+          unpublishWarning:
+            'This listing has no photos left. Saving now takes it off the renter feed until you add a photo and publish it again.',
+          statusPublished: 'Published',
+          statusDraft: 'Draft, hidden from renters',
+          draftHint:
+            'This listing is saved with photos but not published yet. Publish it so renters can find it.',
+          notice: {
+            saved: 'Changes saved ✓',
+            reloaded:
+              'Your last save went through, so the listing was reloaded from the server.',
+            published: 'Listing published ✓',
+          },
         },
         validation: {
           required: 'This field is required.',
@@ -295,6 +337,7 @@ const resources = {
       auth: {
         signUp: 'Sign up',
         logIn: 'Log in',
+        logOut: 'Log out',
         switchForm: 'Authentication form',
         loginTitle: 'Welcome back',
         loginDescription: 'Sign in to continue to Doorbell.',
@@ -384,6 +427,8 @@ const resources = {
         network: 'Cannot reach the server. Please try again.',
         authentication: {
           unauthorized: 'Please sign in again.',
+          sessionChanged:
+            'You signed in to a different account. Reload the page to continue.',
         },
         authorization: {
           forbidden: 'You do not have permission to perform this action.',

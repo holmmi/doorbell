@@ -12,6 +12,7 @@
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
+    "test": "node --test \"src/**/tests/*.test.ts\"",
     "preview": "vite preview"
   },
   "dependencies": {

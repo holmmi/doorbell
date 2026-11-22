@@ -1,5 +1,10 @@
 import { createContext, use } from 'react'
-import type { LoginInput, RegistrationInput, UserInfo } from '../types/user'
+import type {
+  LoginInput,
+  ProfileUpdate,
+  RegistrationInput,
+  UserInfo,
+} from '../types/user'
 
 export type AuthStatus = 'loading' | 'authenticated' | 'anonymous'
 
@@ -10,6 +15,10 @@ export type AuthContextValue = {
   login: (input: LoginInput) => Promise<UserInfo>
   register: (input: RegistrationInput) => Promise<UserInfo>
   logout: () => void
+  // Reloads the signed-in user from GET /api/user/info.
+  refreshUser: () => Promise<UserInfo>
+  // Saves profile changes and stores the returned user.
+  updateProfile: (update: ProfileUpdate) => Promise<UserInfo>
 }
 
 // Provided by AuthProvider. Kept here because component files may only

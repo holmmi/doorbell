@@ -28,6 +28,16 @@ export const LogInIcon = (props: SvgIconProps) => {
   )
 }
 
+export const LogOutIcon = (props: SvgIconProps) => {
+  return (
+    <StrokeIcon {...props}>
+      <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+      <path d="m16 17 5-5-5-5" />
+      <path d="M21 12H9" />
+    </StrokeIcon>
+  )
+}
+
 export const PlusIcon = (props: SvgIconProps) => {
   return (
     <StrokeIcon {...props}>
@@ -40,6 +50,22 @@ export const CloseIcon = (props: SvgIconProps) => {
   return (
     <StrokeIcon {...props}>
       <path d="M18 6 6 18M6 6l12 12" />
+    </StrokeIcon>
+  )
+}
+
+export const ChevronLeftIcon = (props: SvgIconProps) => {
+  return (
+    <StrokeIcon {...props}>
+      <path d="m15 18-6-6 6-6" />
+    </StrokeIcon>
+  )
+}
+
+export const ChevronRightIcon = (props: SvgIconProps) => {
+  return (
+    <StrokeIcon {...props}>
+      <path d="m9 18 6-6-6-6" />
     </StrokeIcon>
   )
 }
