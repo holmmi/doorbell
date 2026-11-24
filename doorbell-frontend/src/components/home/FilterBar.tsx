@@ -1,4 +1,4 @@
-import { Box, ListSubheader, MenuItem, Select, Typography } from '@mui/material'
+import { Box, MenuItem, Select, Typography } from '@mui/material'
 import type { ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { FeedFilters, ListingFilterOptions } from '../../types/listing'
@@ -6,8 +6,6 @@ import type { FeedFilters, ListingFilterOptions } from '../../types/listing'
 const minSizes = [30, 40, 50]
 // Fixed budget steps keep the dropdown useful regardless of distinct rents.
 const maxPrices = [500, 1000, 1500, 2000, 2500, 3000]
-const locationValue = (city: string, neighborhood = '') =>
-  city ? JSON.stringify([city, neighborhood]) : ''
 
 interface FilterBarProps {
   filters: FeedFilters
@@ -80,12 +78,9 @@ const FilterField = ({
 
 export const FilterBar = ({ filters, options, onChange }: FilterBarProps) => {
   const { t, i18n } = useTranslation()
-  const locations = (options?.locations ?? []).flatMap(
-    ({ city, neighborhoods }) => [
-      { city, neighborhood: '' },
-      ...neighborhoods.map((neighborhood) => ({ city, neighborhood })),
-    ]
-  )
+  const locations = options?.locations ?? []
+  const neighborhoods =
+    locations.find(({ city }) => city === filters.city)?.neighborhoods ?? []
 
   return (
     <Box
@@ -97,7 +92,8 @@ export const FilterBar = ({ filters, options, onChange }: FilterBarProps) => {
         display: 'grid',
         gridTemplateColumns: {
           xs: 'minmax(0, 1fr)',
-          md: 'minmax(0, 1.5fr) repeat(2, minmax(0, 1fr))',
+          sm: 'repeat(2, minmax(0, 1fr))',
+          md: 'minmax(0, 1fr) minmax(0, 1.4fr) repeat(2, minmax(0, 0.8fr))',
         },
         gap: 2.5,
         p: '20px 24px 24px',
@@ -108,37 +104,33 @@ export const FilterBar = ({ filters, options, onChange }: FilterBarProps) => {
       }}
     >
       <FilterField
-        id="home-filter-location"
-        label={t('home.filters.location')}
-        value={locationValue(filters.city, filters.neighborhood)}
+        id="home-filter-city"
+        label={t('home.filters.city')}
+        value={filters.city}
         disabled={options === null}
-        onChange={(value) => {
-          const location = locations.find(
-            ({ city, neighborhood }) =>
-              locationValue(city, neighborhood) === value
-          )
-          onChange({
-            ...filters,
-            city: location?.city ?? '',
-            neighborhood: location?.neighborhood ?? '',
-          })
-        }}
+        onChange={(city) => onChange({ ...filters, city, neighborhood: '' })}
       >
-        <MenuItem value="">{t('home.filters.anyLocation')}</MenuItem>
-        {(options?.locations ?? []).flatMap(({ city, neighborhoods }) => [
-          <ListSubheader key={`heading:${city}`}>{city}</ListSubheader>,
-          <MenuItem key={locationValue(city)} value={locationValue(city)}>
-            {t('home.filters.wholeCity', { city })}
-          </MenuItem>,
-          ...neighborhoods.map((neighborhood) => (
-            <MenuItem
-              key={locationValue(city, neighborhood)}
-              value={locationValue(city, neighborhood)}
-            >
-              {t('home.filters.neighborhoodInCity', { city, neighborhood })}
-            </MenuItem>
-          )),
-        ])}
+        <MenuItem value="">{t('home.filters.anyCity')}</MenuItem>
+        {locations.map(({ city }) => (
+          <MenuItem key={city} value={city}>
+            {city}
+          </MenuItem>
+        ))}
+      </FilterField>
+
+      <FilterField
+        id="home-filter-neighborhood"
+        label={t('home.filters.neighborhood')}
+        value={filters.neighborhood}
+        disabled={neighborhoods.length === 0}
+        onChange={(neighborhood) => onChange({ ...filters, neighborhood })}
+      >
+        <MenuItem value="">{t('home.filters.allNeighborhoods')}</MenuItem>
+        {neighborhoods.map((neighborhood) => (
+          <MenuItem key={neighborhood} value={neighborhood}>
+            {neighborhood}
+          </MenuItem>
+        ))}
       </FilterField>
 
       <FilterField
