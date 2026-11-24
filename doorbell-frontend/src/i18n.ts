@@ -46,7 +46,7 @@ const resources = {
           maxPrice: 'Max price',
           size: 'Size',
           anyCity: 'Any city',
-          allNeighborhoods: 'All neighbourhoods',
+          allNeighborhoods: 'All neighborhoods',
           loading: 'Loading filter choices…',
           loadError: 'We could not load location choices.',
           noLimit: 'No limit',
