@@ -42,7 +42,7 @@ const resources = {
         subtitle: 'Like a home and the landlord gets a ring.',
         filters: {
           city: 'City',
-          neighborhood: 'Neighbourhood',
+          neighborhood: 'Neighborhood',
           maxPrice: 'Max price',
           size: 'Size',
           anyCity: 'Any city',
