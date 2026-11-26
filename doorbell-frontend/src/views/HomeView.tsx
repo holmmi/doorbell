@@ -237,7 +237,7 @@ const HomeContent = ({
       if (!isCurrentSession()) return
       removeListing()
       // A completed save must not show a notice for an old filter selection.
-      setLikeNotice(liked && latestFiltersRef.current === filters)
+      setLikeNotice(liked && sameFilters(latestFiltersRef.current, filters))
     } catch (error: unknown) {
       if (!isCurrentSession()) return
       if (error instanceof ApiError && error.status === 401) {
