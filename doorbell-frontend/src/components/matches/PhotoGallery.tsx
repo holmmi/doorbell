@@ -54,7 +54,6 @@ export const PhotoGallery = ({
           borderRadius: '16px',
           overflow: 'hidden',
           bgcolor: 'selectedRoleBackground',
-          '& img': { objectFit: 'contain' },
         }}
       >
         <ListingPhoto
