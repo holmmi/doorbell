@@ -49,6 +49,12 @@ const filtersFromSearch = (searchParams: URLSearchParams): FeedFilters => ({
   minSize: parseFilterNumber(searchParams.get('minSize')),
 })
 
+const sameFilters = (a: FeedFilters, b: FeedFilters) =>
+  a.city === b.city &&
+  a.neighborhood === b.neighborhood &&
+  a.maxPrice === b.maxPrice &&
+  a.minSize === b.minSize
+
 const errorCodeOf = (error: unknown) =>
   error instanceof ApiError ? error.code : 'error.unknown'
 
