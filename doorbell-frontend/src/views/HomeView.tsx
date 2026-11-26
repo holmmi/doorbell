@@ -8,9 +8,9 @@ import {
   Skeleton,
   Typography,
 } from '@mui/material'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Link } from 'react-router'
+import { Link, useSearchParams } from 'react-router'
 import { ApiError, getToken } from '../api/client'
 import { getFeed, getFilterOptions } from '../api/listingClient'
 import { savePreference } from '../api/listingInteractionClient'
@@ -37,15 +37,53 @@ const noFilters: FeedFilters = {
   minSize: 0,
 }
 
+const parseFilterNumber = (value: string | null) => {
+  const parsed = Number(value)
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : 0
+}
+
+const filtersFromSearch = (searchParams: URLSearchParams): FeedFilters => ({
+  city: searchParams.get('city') ?? '',
+  neighborhood: searchParams.get('neighborhood') ?? '',
+  maxPrice: parseFilterNumber(searchParams.get('maxPrice')),
+  minSize: parseFilterNumber(searchParams.get('minSize')),
+})
+
 const errorCodeOf = (error: unknown) =>
   error instanceof ApiError ? error.code : 'error.unknown'
 
 export const HomeView = () => {
   const { user, status } = useAuth()
-  const [filters, setFilters] = useState<FeedFilters>(noFilters)
+  const [searchParams, setSearchParams] = useSearchParams()
+  const filters = useMemo(() => filtersFromSearch(searchParams), [searchParams])
   const [options, setOptions] = useState<ListingFilterOptions | null>(null)
   const [optionsError, setOptionsError] = useState<string | null>(null)
   const [optionsAttempt, setOptionsAttempt] = useState(0)
+
+  const setFilters = (nextFilters: FeedFilters) => {
+    const nextSearchParams = new URLSearchParams(searchParams)
+    if (nextFilters.city) {
+      nextSearchParams.set('city', nextFilters.city)
+    } else {
+      nextSearchParams.delete('city')
+    }
+    if (nextFilters.neighborhood) {
+      nextSearchParams.set('neighborhood', nextFilters.neighborhood)
+    } else {
+      nextSearchParams.delete('neighborhood')
+    }
+    if (nextFilters.maxPrice > 0) {
+      nextSearchParams.set('maxPrice', String(nextFilters.maxPrice))
+    } else {
+      nextSearchParams.delete('maxPrice')
+    }
+    if (nextFilters.minSize > 0) {
+      nextSearchParams.set('minSize', String(nextFilters.minSize))
+    } else {
+      nextSearchParams.delete('minSize')
+    }
+    setSearchParams(nextSearchParams, { replace: true })
+  }
 
   useEffect(() => {
     let ignore = false

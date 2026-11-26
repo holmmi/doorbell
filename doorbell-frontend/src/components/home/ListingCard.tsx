@@ -1,7 +1,7 @@
 import { Box, Button, ButtonBase, Divider, Typography } from '@mui/material'
 import { useState, type MouseEvent, type PointerEvent } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Link } from 'react-router'
+import { Link, useLocation } from 'react-router'
 import type { HomeListing } from '../../types/listing'
 import { formatDayMonth, formatNumber } from '../../utils/format'
 import { ChevronLeftIcon, ChevronRightIcon } from './icons'
@@ -55,6 +55,7 @@ export function ListingCard({
   dislikeOpacity,
 }: ListingCardProps) {
   const { t, i18n } = useTranslation()
+  const { search } = useLocation()
   const [imageIndex, setImageIndex] = useState(0)
   const imageCount = listing.images.length
   const showImage = (index: number) =>
@@ -312,7 +313,7 @@ export function ListingCard({
           </Box>
           <Button
             component={Link}
-            to={`/listings/${listing.id}`}
+            to={`/listings/${listing.id}${search}`}
             draggable={false}
             sx={{
               flexShrink: 0,

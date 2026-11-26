@@ -9,7 +9,7 @@ import {
 } from '@mui/material'
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Link as RouterLink, useParams } from 'react-router'
+import { Link as RouterLink, useLocation, useParams } from 'react-router'
 import { ApiError, getToken } from '../api/client'
 import { getListing } from '../api/listingClient'
 import { ChevronLeftIcon } from '../components/home/icons'
@@ -34,12 +34,12 @@ const visuallyHidden = {
   whiteSpace: 'nowrap',
 } as const
 
-const BackToBrowsing = () => {
+const BackToBrowsing = ({ to }: { to: string }) => {
   const { t } = useTranslation()
   return (
     <Button
       component={RouterLink}
-      to="/"
+      to={to}
       startIcon={<ChevronLeftIcon />}
       sx={{
         alignSelf: 'flex-start',
@@ -70,6 +70,7 @@ const LoadingState = () => {
 
 export const ListingDetailsView = () => {
   const { t } = useTranslation()
+  const { search } = useLocation()
   const { id = '' } = useParams()
   const { user, status: authStatus, logout } = useAuth()
   const [revision, setRevision] = useState(0)
@@ -120,6 +121,7 @@ export const ListingDetailsView = () => {
 
   const current = result?.key === requestKey ? result : null
   const retry = () => setRevision((value) => value + 1)
+  const backToBrowsing = `/${search}`
 
   return (
     <Box
@@ -132,7 +134,7 @@ export const ListingDetailsView = () => {
         gap: { xs: 2.5, md: 3 },
       }}
     >
-      <BackToBrowsing />
+      <BackToBrowsing to={backToBrowsing} />
 
       {current === null ? <LoadingState /> : null}
 
@@ -157,7 +159,11 @@ export const ListingDetailsView = () => {
           <Typography sx={{ color: 'text.secondary' }}>
             {t('listingDetails.notFoundBody')}
           </Typography>
-          <Button component={RouterLink} to="/" variant="contained">
+          <Button
+            component={RouterLink}
+            to={backToBrowsing}
+            variant="contained"
+          >
             {t('listingDetails.backToBrowsing')}
           </Button>
         </Stack>
