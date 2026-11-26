@@ -1,7 +1,7 @@
 import { CssBaseline } from '@mui/material'
 import { ThemeProvider } from '@mui/material/styles'
 import { lazy, Suspense, type ComponentType } from 'react'
-import { BrowserRouter, Route, Routes } from 'react-router'
+import { BrowserRouter, Navigate, Route, Routes } from 'react-router'
 import { AuthProvider } from './auth/AuthProvider'
 import { ProtectedRoute } from './auth/ProtectedRoute'
 import { AppShell } from './components/AppShell'
@@ -87,6 +87,7 @@ const App = () => {
                   />
                 </Route>
               </Route>
+              <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
           </InteractionsProvider>
         </AuthProvider>
