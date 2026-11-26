@@ -1,5 +1,6 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Alert, Box, Button, Typography } from '@mui/material'
+import { useState } from 'react'
 import { useForm, useWatch } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
 import { Link as RouterLink } from 'react-router'
@@ -15,9 +16,14 @@ import {
   listingFormSchema,
 } from '../schemas/listing'
 import type { ListingFormInput, ListingFormValues } from '../schemas/listing'
+import { toIsoDate } from '../utils/format'
 
 export const CreateListingView = () => {
   const { t } = useTranslation()
+  const [defaultValues] = useState<ListingFormInput>(() => ({
+    ...emptyListingForm,
+    availableFrom: toIsoDate(new Date()),
+  }))
   const {
     photos,
     photoError,
@@ -37,7 +43,7 @@ export const CreateListingView = () => {
     ListingFormValues
   >({
     resolver: zodResolver(listingFormSchema),
-    defaultValues: emptyListingForm,
+    defaultValues,
   })
   const draft = { ...emptyListingForm, ...useWatch({ control }) }
 
