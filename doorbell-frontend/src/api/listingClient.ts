@@ -63,6 +63,12 @@ export const getListing = (
   return client.request<ListingDetails>(listingPath(listingId), { signal })
 }
 
+// All listings owned by the signed-in landlord, published and unpublished.
+export const getMyListings = (
+  signal?: AbortSignal
+): Promise<ListingDetails[]> =>
+  authenticatedClient.request<ListingDetails[]>('/listing/mine', { signal })
+
 export const requestImageUpload = (
   listingId: string,
   contentType: string

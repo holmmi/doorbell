@@ -38,6 +38,10 @@ const EditListingView = lazyView(
   () => import('./views/EditListingView'),
   'EditListingView'
 )
+const MyListingsView = lazyView(
+  () => import('./views/MyListingsView'),
+  'MyListingsView'
+)
 const PrivacyView = lazyView(() => import('./views/PrivacyView'), 'PrivacyView')
 const AboutView = lazyView(() => import('./views/AboutView'), 'AboutView')
 const ContactView = lazyView(() => import('./views/ContactView'), 'ContactView')
@@ -80,6 +84,7 @@ const App = () => {
                     path="/listing/new"
                     element={page(CreateListingView)}
                   />
+                  <Route path="/listing/mine" element={page(MyListingsView)} />
                   <Route path="/likes" element={page(LikesView)} />
                   <Route
                     path="/listing/:listingId/edit"

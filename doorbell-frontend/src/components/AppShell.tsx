@@ -25,6 +25,7 @@ import { LogOutIcon } from './icons'
 const navItems = [
   { key: 'home', to: '/' },
   { key: 'matches', to: '/matches', role: 'TENANT' },
+  { key: 'myListings', to: '/listing/mine', role: 'LANDLORD' },
   { key: 'likes', to: '/likes', role: 'LANDLORD' },
   { key: 'profile', to: '/profile' },
 ] as const satisfies { key: string; to: string; role?: UserRole }[]

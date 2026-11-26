@@ -12,7 +12,23 @@ const resources = {
         home: 'Home',
         matches: 'Matches',
         likes: 'Likes',
+        myListings: 'My listings',
         profile: 'Profile',
+      },
+      myListings: {
+        title: 'My listings',
+        subtitle:
+          'All your homes in one place, published and drafts. Open one to edit its details or photos.',
+        add: 'Add listing',
+        edit: 'Edit',
+        editFor: 'Edit {{location}}',
+        view: 'View',
+        viewFor: 'View {{location}} as renters see it',
+        emptyTitle: 'No listings yet',
+        emptyBody:
+          'Add your first home with a few details and photos. Renters can start swiping on it as soon as you publish.',
+        loadFailed: 'Your listings could not be loaded.',
+        retry: 'Try again',
       },
       profile: {
         avatarAlt: 'Profile picture',
